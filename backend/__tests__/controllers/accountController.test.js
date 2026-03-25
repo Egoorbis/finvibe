@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
 import request from 'supertest';
-import { setupTestDatabase, teardownTestDatabase } from '../utils/testDb.js';
+import { setupTestDatabase, teardownTestDatabase, clearTestData } from '../utils/testDb.js';
 
 let testDb;
 let app;
@@ -24,11 +24,8 @@ afterAll(() => {
   teardownTestDatabase(testDb);
 });
 
-beforeEach(() => {
-  testDb.exec('DELETE FROM transactions');
-  testDb.exec('DELETE FROM budgets');
-  testDb.exec('DELETE FROM accounts');
-  testDb.exec('DELETE FROM categories');
+beforeEach(async () => {
+  clearTestData(testDb);
 });
 
 describe('Account Controller', () => {

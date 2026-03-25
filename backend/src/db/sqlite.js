@@ -23,25 +23,36 @@ class SqliteAdapter {
   }
 
   /**
+   * Convert PostgreSQL-style placeholders ($1, $2) to SQLite-style (?)
+   */
+  convertPlaceholders(text) {
+    let index = 1;
+    return text.replace(/\$\d+/g, () => '?');
+  }
+
+  /**
    * Execute a query and return all rows
    * Async wrapper for better-sqlite3's synchronous methods
    */
   async all(text, params = []) {
-    return Promise.resolve(this.db.prepare(text).all(...params));
+    const sqliteQuery = this.convertPlaceholders(text);
+    return Promise.resolve(this.db.prepare(sqliteQuery).all(...params));
   }
 
   /**
    * Execute a query and return single row
    */
   async get(text, params = []) {
-    return Promise.resolve(this.db.prepare(text).get(...params));
+    const sqliteQuery = this.convertPlaceholders(text);
+    return Promise.resolve(this.db.prepare(sqliteQuery).get(...params));
   }
 
   /**
    * Execute a query that modifies data
    */
   async run(text, params = []) {
-    const result = this.db.prepare(text).run(...params);
+    const sqliteQuery = this.convertPlaceholders(text);
+    const result = this.db.prepare(sqliteQuery).run(...params);
     return Promise.resolve({
       changes: result.changes,
       lastInsertRowid: result.lastInsertRowid,

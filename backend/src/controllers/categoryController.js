@@ -2,10 +2,10 @@ import { Category } from '../models/Category.js';
 
 export const categoryController = {
   // GET /api/categories
-  getAll(req, res) {
+  async getAll(req, res) {
     try {
       const { type } = req.query;
-      const categories = type ? Category.getByType(type) : Category.getAll();
+      const categories = type ? await Category.getByType(type) : await Category.getAll();
       res.json(categories);
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -13,9 +13,9 @@ export const categoryController = {
   },
 
   // GET /api/categories/:id
-  getById(req, res) {
+  async getById(req, res) {
     try {
-      const category = Category.getById(req.params.id);
+      const category = await Category.getById(req.params.id);
       if (!category) {
         return res.status(404).json({ error: 'Category not found' });
       }
@@ -26,9 +26,9 @@ export const categoryController = {
   },
 
   // POST /api/categories
-  create(req, res) {
+  async create(req, res) {
     try {
-      const category = Category.create(req.body);
+      const category = await Category.create(req.body);
       res.status(201).json(category);
     } catch (error) {
       res.status(400).json({ error: error.message });
@@ -36,9 +36,9 @@ export const categoryController = {
   },
 
   // PUT /api/categories/:id
-  update(req, res) {
+  async update(req, res) {
     try {
-      const category = Category.update(req.params.id, req.body);
+      const category = await Category.update(req.params.id, req.body);
       if (!category) {
         return res.status(404).json({ error: 'Category not found' });
       }
@@ -49,9 +49,9 @@ export const categoryController = {
   },
 
   // DELETE /api/categories/:id
-  delete(req, res) {
+  async delete(req, res) {
     try {
-      const result = Category.delete(req.params.id);
+      const result = await Category.delete(req.params.id);
       if (result.changes === 0) {
         return res.status(404).json({ error: 'Category not found' });
       }

@@ -13,6 +13,7 @@ export default {
     '!src/index.js',
     '!src/db/database.js',
     '!src/db/migrate.js',
+    '!src/db/migrate-postgres.js',
     '!src/db/seed.js'
   ],
   coverageThreshold: {

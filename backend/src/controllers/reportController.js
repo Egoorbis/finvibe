@@ -2,14 +2,14 @@ import { Transaction } from '../models/Transaction.js';
 
 export const reportController = {
   // GET /api/reports/summary
-  getSummary(req, res) {
+  async getSummary(req, res) {
     try {
       const filters = {
         start_date: req.query.start_date,
         end_date: req.query.end_date
       };
 
-      const summary = Transaction.getSummary(filters);
+      const summary = await Transaction.getSummary(filters);
 
       // Format the response
       const result = {
@@ -26,7 +26,7 @@ export const reportController = {
   },
 
   // GET /api/reports/by-category
-  getByCategory(req, res) {
+  async getByCategory(req, res) {
     try {
       const filters = {
         type: req.query.type,
@@ -34,7 +34,7 @@ export const reportController = {
         end_date: req.query.end_date
       };
 
-      const categoryData = Transaction.getByCategory(filters);
+      const categoryData = await Transaction.getByCategory(filters);
       res.json(categoryData);
     } catch (error) {
       res.status(500).json({ error: error.message });

@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { setupTestDatabase, teardownTestDatabase, seedTestData } from '../utils/testDb.js';
+import { setupTestDatabase, teardownTestDatabase, seedTestData, clearTestData } from '../utils/testDb.js';
 
 // Mock the database module
 let testDb;
@@ -22,17 +22,14 @@ afterAll(() => {
   teardownTestDatabase(testDb);
 });
 
-beforeEach(() => {
+beforeEach(async () => {
   // Clear all tables before each test
-  testDb.exec('DELETE FROM transactions');
-  testDb.exec('DELETE FROM budgets');
-  testDb.exec('DELETE FROM accounts');
-  testDb.exec('DELETE FROM categories');
+  clearTestData(testDb);
 });
 
 describe('Account Model', () => {
   describe('create', () => {
-    it('should create a new account with all fields', () => {
+    it('should create a new account with all fields', async () => {
       const accountData = {
         name: 'Savings Account',
         type: 'bank',
@@ -40,7 +37,7 @@ describe('Account Model', () => {
         currency: 'USD'
       };
 
-      const account = Account.create(accountData);
+      const account = await Account.create(accountData);
 
       expect(account).toBeDefined();
       expect(account.id).toBeDefined();
@@ -51,21 +48,21 @@ describe('Account Model', () => {
       expect(account.created_at).toBeDefined();
     });
 
-    it('should create account with default balance and currency', () => {
+    it('should create account with default balance and currency', async () => {
       const accountData = {
         name: 'Credit Card',
         type: 'credit_card'
       };
 
-      const account = Account.create(accountData);
+      const account = await Account.create(accountData);
 
       expect(account).toBeDefined();
       expect(account.balance).toBe(0);
       expect(account.currency).toBe('USD');
     });
 
-    it('should support different currencies', () => {
-      const account = Account.create({
+    it('should support different currencies', async () => {
+      const account = await Account.create({
         name: 'Euro Account',
         type: 'bank',
         balance: 1000,
@@ -75,8 +72,8 @@ describe('Account Model', () => {
       expect(account.currency).toBe('EUR');
     });
 
-    it('should support CHF currency', () => {
-      const account = Account.create({
+    it('should support CHF currency', async () => {
+      const account = await Account.create({
         name: 'Swiss Account',
         type: 'bank',
         balance: 1000,
@@ -88,28 +85,28 @@ describe('Account Model', () => {
   });
 
   describe('getAll', () => {
-    it('should return empty array when no accounts exist', () => {
-      const accounts = Account.getAll();
+    it('should return empty array when no accounts exist', async () => {
+      const accounts = await Account.getAll();
       expect(accounts).toEqual([]);
     });
 
-    it('should return all accounts', () => {
+    it('should return all accounts', async () => {
       Account.create({ name: 'Account 1', type: 'bank', balance: 100 });
       Account.create({ name: 'Account 2', type: 'credit_card', balance: 200 });
 
-      const accounts = Account.getAll();
+      const accounts = await Account.getAll();
 
       expect(accounts).toHaveLength(2);
       expect(accounts[1].name).toBe('Account 2'); // Most recent first
       expect(accounts[0].name).toBe('Account 1');
     });
 
-    it('should return accounts ordered by created_at DESC', () => {
-      const account1 = Account.create({ name: 'First', type: 'bank' });
-      const account2 = Account.create({ name: 'Second', type: 'bank' });
-      const account3 = Account.create({ name: 'Third', type: 'bank' });
+    it('should return accounts ordered by created_at DESC', async () => {
+      const account1 = await Account.create({ name: 'First', type: 'bank' });
+      const account2 = await Account.create({ name: 'Second', type: 'bank' });
+      const account3 = await Account.create({ name: 'Third', type: 'bank' });
 
-      const accounts = Account.getAll();
+      const accounts = await Account.getAll();
 
       expect(accounts[2].id).toBe(account3.id);
       expect(accounts[1].id).toBe(account2.id);
@@ -118,10 +115,10 @@ describe('Account Model', () => {
   });
 
   describe('getById', () => {
-    it('should return account by id', () => {
-      const created = Account.create({ name: 'Test Account', type: 'bank', balance: 500 });
+    it('should return account by id', async () => {
+      const created = await Account.create({ name: 'Test Account', type: 'bank', balance: 500 });
 
-      const account = Account.getById(created.id);
+      const account = await Account.getById(created.id);
 
       expect(account).toBeDefined();
       expect(account.id).toBe(created.id);
@@ -129,17 +126,17 @@ describe('Account Model', () => {
       expect(account.balance).toBe(500);
     });
 
-    it('should return undefined for non-existent id', () => {
-      const account = Account.getById(999);
+    it('should return undefined for non-existent id', async () => {
+      const account = await Account.getById(999);
       expect(account).toBeUndefined();
     });
   });
 
   describe('update', () => {
-    it('should update account fields', () => {
-      const account = Account.create({ name: 'Old Name', type: 'bank', balance: 100 });
+    it('should update account fields', async () => {
+      const account = await Account.create({ name: 'Old Name', type: 'bank', balance: 100 });
 
-      const updated = Account.update(account.id, {
+      const updated = await Account.update(account.id, {
         name: 'New Name',
         type: 'credit_card',
         balance: 200,
@@ -154,50 +151,50 @@ describe('Account Model', () => {
   });
 
   describe('delete', () => {
-    it('should delete an account', () => {
-      const account = Account.create({ name: 'To Delete', type: 'bank' });
+    it('should delete an account', async () => {
+      const account = await Account.create({ name: 'To Delete', type: 'bank' });
 
-      const result = Account.delete(account.id);
+      const result = await Account.delete(account.id);
 
       expect(result.changes).toBe(1);
-      expect(Account.getById(account.id)).toBeUndefined();
+      expect(await Account.getById(account.id)).toBeUndefined();
     });
 
-    it('should return 0 changes for non-existent account', () => {
-      const result = Account.delete(999);
+    it('should return 0 changes for non-existent account', async () => {
+      const result = await Account.delete(999);
       expect(result.changes).toBe(0);
     });
   });
 
   describe('updateBalance', () => {
-    it('should increase account balance', () => {
-      const account = Account.create({ name: 'Test', type: 'bank', balance: 100 });
+    it('should increase account balance', async () => {
+      const account = await Account.create({ name: 'Test', type: 'bank', balance: 100 });
 
-      const updated = Account.updateBalance(account.id, 50);
+      const updated = await Account.updateBalance(account.id, 50);
 
       expect(updated.balance).toBe(150);
     });
 
-    it('should decrease account balance', () => {
-      const account = Account.create({ name: 'Test', type: 'bank', balance: 100 });
+    it('should decrease account balance', async () => {
+      const account = await Account.create({ name: 'Test', type: 'bank', balance: 100 });
 
-      const updated = Account.updateBalance(account.id, -30);
+      const updated = await Account.updateBalance(account.id, -30);
 
       expect(updated.balance).toBe(70);
     });
 
-    it('should handle negative balances', () => {
-      const account = Account.create({ name: 'Test', type: 'credit_card', balance: 0 });
+    it('should handle negative balances', async () => {
+      const account = await Account.create({ name: 'Test', type: 'credit_card', balance: 0 });
 
-      const updated = Account.updateBalance(account.id, -500);
+      const updated = await Account.updateBalance(account.id, -500);
 
       expect(updated.balance).toBe(-500);
     });
 
-    it('should handle decimal amounts', () => {
-      const account = Account.create({ name: 'Test', type: 'bank', balance: 100.50 });
+    it('should handle decimal amounts', async () => {
+      const account = await Account.create({ name: 'Test', type: 'bank', balance: 100.50 });
 
-      const updated = Account.updateBalance(account.id, 25.75);
+      const updated = await Account.updateBalance(account.id, 25.75);
 
       expect(updated.balance).toBeCloseTo(126.25, 2);
     });

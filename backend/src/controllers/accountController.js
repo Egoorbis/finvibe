@@ -2,9 +2,9 @@ import { Account } from '../models/Account.js';
 
 export const accountController = {
   // GET /api/accounts
-  getAll(req, res) {
+  async getAll(req, res) {
     try {
-      const accounts = Account.getAll();
+      const accounts = await Account.getAll();
       res.json(accounts);
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -12,9 +12,9 @@ export const accountController = {
   },
 
   // GET /api/accounts/:id
-  getById(req, res) {
+  async getById(req, res) {
     try {
-      const account = Account.getById(req.params.id);
+      const account = await Account.getById(req.params.id);
       if (!account) {
         return res.status(404).json({ error: 'Account not found' });
       }
@@ -25,9 +25,9 @@ export const accountController = {
   },
 
   // POST /api/accounts
-  create(req, res) {
+  async create(req, res) {
     try {
-      const account = Account.create(req.body);
+      const account = await Account.create(req.body);
       res.status(201).json(account);
     } catch (error) {
       res.status(400).json({ error: error.message });
@@ -35,9 +35,9 @@ export const accountController = {
   },
 
   // PUT /api/accounts/:id
-  update(req, res) {
+  async update(req, res) {
     try {
-      const account = Account.update(req.params.id, req.body);
+      const account = await Account.update(req.params.id, req.body);
       if (!account) {
         return res.status(404).json({ error: 'Account not found' });
       }
@@ -48,9 +48,9 @@ export const accountController = {
   },
 
   // DELETE /api/accounts/:id
-  delete(req, res) {
+  async delete(req, res) {
     try {
-      const result = Account.delete(req.params.id);
+      const result = await Account.delete(req.params.id);
       if (result.changes === 0) {
         return res.status(404).json({ error: 'Account not found' });
       }

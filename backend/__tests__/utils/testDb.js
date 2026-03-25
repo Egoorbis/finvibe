@@ -1,13 +1,12 @@
-import Database from 'better-sqlite3';
+import DatabaseFactory from '../../src/db/database-factory.js';
 
 // Create test database
 export function setupTestDatabase() {
-  // Use in-memory database for tests
-  const db = new Database(':memory:');
-  db.pragma('foreign_keys = ON');
+  // Use in-memory SQLite database for tests
+  const db = DatabaseFactory.createTestDatabase();
 
-  // Create schema
-  db.exec(`
+  // Create schema (synchronous for setup)
+  db.db.exec(`
     CREATE TABLE accounts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -60,26 +59,34 @@ export function setupTestDatabase() {
   return db;
 }
 
-export function teardownTestDatabase(db) {
+export async function teardownTestDatabase(db) {
   if (db) {
-    db.close();
+    await db.close();
   }
 }
 
+export function clearTestData(db) {
+  // Clear all tables synchronously for tests
+  db.db.exec('DELETE FROM transactions');
+  db.db.exec('DELETE FROM budgets');
+  db.db.exec('DELETE FROM accounts');
+  db.db.exec('DELETE FROM categories');
+}
+
 export function seedTestData(db) {
-  // Seed accounts
-  const account = db.prepare(`
+  // Seed accounts (using direct db access for sync operation)
+  const account = db.db.prepare(`
     INSERT INTO accounts (name, type, balance, currency)
     VALUES (?, ?, ?, ?)
   `).run('Test Bank', 'bank', 1000.00, 'USD');
 
   // Seed categories
-  const expenseCategory = db.prepare(`
+  const expenseCategory = db.db.prepare(`
     INSERT INTO categories (name, type, color, icon)
     VALUES (?, ?, ?, ?)
   `).run('Food', 'expense', '#FF6B6B', '🍽️');
 
-  const incomeCategory = db.prepare(`
+  const incomeCategory = db.db.prepare(`
     INSERT INTO categories (name, type, color, icon)
     VALUES (?, ?, ?, ?)
   `).run('Salary', 'income', '#26DE81', '💰');

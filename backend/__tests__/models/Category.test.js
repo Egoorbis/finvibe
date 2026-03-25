@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { setupTestDatabase, teardownTestDatabase } from '../utils/testDb.js';
+import { setupTestDatabase, teardownTestDatabase, clearTestData } from '../utils/testDb.js';
 
 let testDb;
 let Category;
@@ -19,15 +19,13 @@ afterAll(() => {
   teardownTestDatabase(testDb);
 });
 
-beforeEach(() => {
-  testDb.exec('DELETE FROM transactions');
-  testDb.exec('DELETE FROM budgets');
-  testDb.exec('DELETE FROM categories');
+beforeEach(async () => {
+  clearTestData(testDb);
 });
 
 describe('Category Model', () => {
   describe('create', () => {
-    it('should create expense category with all fields', () => {
+    it('should create expense category with all fields', async () => {
       const categoryData = {
         name: 'Food & Dining',
         type: 'expense',
@@ -35,7 +33,7 @@ describe('Category Model', () => {
         icon: '🍽️'
       };
 
-      const category = Category.create(categoryData);
+      const category = await Category.create(categoryData);
 
       expect(category).toBeDefined();
       expect(category.id).toBeDefined();
@@ -46,8 +44,8 @@ describe('Category Model', () => {
       expect(category.created_at).toBeDefined();
     });
 
-    it('should create income category', () => {
-      const category = Category.create({
+    it('should create income category', async () => {
+      const category = await Category.create({
         name: 'Salary',
         type: 'income',
         color: '#26DE81',
@@ -58,8 +56,8 @@ describe('Category Model', () => {
       expect(category.name).toBe('Salary');
     });
 
-    it('should create category with null color and icon', () => {
-      const category = Category.create({
+    it('should create category with null color and icon', async () => {
+      const category = await Category.create({
         name: 'Misc',
         type: 'expense'
       });
@@ -68,11 +66,11 @@ describe('Category Model', () => {
       expect(category.icon).toBeNull();
     });
 
-    it('should support various emoji icons', () => {
+    it('should support various emoji icons', async () => {
       const emojis = ['🚗', '🏠', '⚡', '📱', '🎬'];
 
-      emojis.forEach(emoji => {
-        const category = Category.create({
+      emojis.forEach(async emoji => {
+        const category = await Category.create({
           name: `Test ${emoji}`,
           type: 'expense',
           icon: emoji
@@ -83,27 +81,27 @@ describe('Category Model', () => {
   });
 
   describe('getAll', () => {
-    it('should return empty array when no categories exist', () => {
-      const categories = Category.getAll();
+    it('should return empty array when no categories exist', async () => {
+      const categories = await Category.getAll();
       expect(categories).toEqual([]);
     });
 
-    it('should return all categories', () => {
+    it('should return all categories', async () => {
       Category.create({ name: 'Food', type: 'expense', color: '#FF6B6B', icon: '🍽️' });
       Category.create({ name: 'Salary', type: 'income', color: '#26DE81', icon: '💰' });
       Category.create({ name: 'Transport', type: 'expense', color: '#4ECDC4', icon: '🚗' });
 
-      const categories = Category.getAll();
+      const categories = await Category.getAll();
 
       expect(categories).toHaveLength(3);
     });
 
-    it('should return categories ordered by type then name', () => {
+    it('should return categories ordered by type then name', async () => {
       Category.create({ name: 'Zebra', type: 'expense' });
       Category.create({ name: 'Alpha', type: 'income' });
       Category.create({ name: 'Beta', type: 'expense' });
 
-      const categories = Category.getAll();
+      const categories = await Category.getAll();
 
       // Expenses come first (alphabetically), then income
       expect(categories[0].name).toBe('Beta');
@@ -116,50 +114,50 @@ describe('Category Model', () => {
   });
 
   describe('getByType', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
       Category.create({ name: 'Food', type: 'expense' });
       Category.create({ name: 'Transport', type: 'expense' });
       Category.create({ name: 'Salary', type: 'income' });
       Category.create({ name: 'Bonus', type: 'income' });
     });
 
-    it('should return only expense categories', () => {
-      const expenses = Category.getByType('expense');
+    it('should return only expense categories', async () => {
+      const expenses = await Category.getByType('expense');
 
       expect(expenses).toHaveLength(2);
       expect(expenses.every(c => c.type === 'expense')).toBe(true);
     });
 
-    it('should return only income categories', () => {
-      const income = Category.getByType('income');
+    it('should return only income categories', async () => {
+      const income = await Category.getByType('income');
 
       expect(income).toHaveLength(2);
       expect(income.every(c => c.type === 'income')).toBe(true);
     });
 
-    it('should return categories ordered by name', () => {
-      const expenses = Category.getByType('expense');
+    it('should return categories ordered by name', async () => {
+      const expenses = await Category.getByType('expense');
 
       expect(expenses[0].name).toBe('Food');
       expect(expenses[1].name).toBe('Transport');
     });
 
-    it('should return empty array for non-existent type', () => {
-      const categories = Category.getByType('invalid');
+    it('should return empty array for non-existent type', async () => {
+      const categories = await Category.getByType('invalid');
       expect(categories).toEqual([]);
     });
   });
 
   describe('getById', () => {
-    it('should return category by id', () => {
-      const created = Category.create({
+    it('should return category by id', async () => {
+      const created = await Category.create({
         name: 'Entertainment',
         type: 'expense',
         color: '#FFA07A',
         icon: '🎬'
       });
 
-      const category = Category.getById(created.id);
+      const category = await Category.getById(created.id);
 
       expect(category).toBeDefined();
       expect(category.id).toBe(created.id);
@@ -168,22 +166,22 @@ describe('Category Model', () => {
       expect(category.icon).toBe('🎬');
     });
 
-    it('should return undefined for non-existent id', () => {
-      const category = Category.getById(999);
+    it('should return undefined for non-existent id', async () => {
+      const category = await Category.getById(999);
       expect(category).toBeUndefined();
     });
   });
 
   describe('update', () => {
-    it('should update category fields', () => {
-      const category = Category.create({
+    it('should update category fields', async () => {
+      const category = await Category.create({
         name: 'Old Name',
         type: 'expense',
         color: '#FF0000',
         icon: '❌'
       });
 
-      const updated = Category.update(category.id, {
+      const updated = await Category.update(category.id, {
         name: 'New Name',
         type: 'income',
         color: '#00FF00',
@@ -196,15 +194,15 @@ describe('Category Model', () => {
       expect(updated.icon).toBe('✅');
     });
 
-    it('should update only specific fields', () => {
-      const category = Category.create({
+    it('should update only specific fields', async () => {
+      const category = await Category.create({
         name: 'Shopping',
         type: 'expense',
         color: '#FF6B6B',
         icon: '🛒'
       });
 
-      const updated = Category.update(category.id, {
+      const updated = await Category.update(category.id, {
         name: 'Shopping Updated',
         type: 'expense',
         color: '#FF0000',
@@ -218,27 +216,27 @@ describe('Category Model', () => {
   });
 
   describe('delete', () => {
-    it('should delete a category', () => {
-      const category = Category.create({
+    it('should delete a category', async () => {
+      const category = await Category.create({
         name: 'To Delete',
         type: 'expense'
       });
 
-      const result = Category.delete(category.id);
+      const result = await Category.delete(category.id);
 
       expect(result.changes).toBe(1);
-      expect(Category.getById(category.id)).toBeUndefined();
+      expect(await Category.getById(category.id)).toBeUndefined();
     });
 
-    it('should return 0 changes for non-existent category', () => {
-      const result = Category.delete(999);
+    it('should return 0 changes for non-existent category', async () => {
+      const result = await Category.delete(999);
       expect(result.changes).toBe(0);
     });
   });
 
   describe('edge cases', () => {
-    it('should handle special characters in name', () => {
-      const category = Category.create({
+    it('should handle special characters in name', async () => {
+      const category = await Category.create({
         name: "Coffee & Tea's Shop",
         type: 'expense'
       });
@@ -246,9 +244,9 @@ describe('Category Model', () => {
       expect(category.name).toBe("Coffee & Tea's Shop");
     });
 
-    it('should handle very long names', () => {
+    it('should handle very long names', async () => {
       const longName = 'A'.repeat(255);
-      const category = Category.create({
+      const category = await Category.create({
         name: longName,
         type: 'expense'
       });
@@ -256,11 +254,11 @@ describe('Category Model', () => {
       expect(category.name).toBe(longName);
     });
 
-    it('should handle hex color codes', () => {
+    it('should handle hex color codes', async () => {
       const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A'];
 
-      colors.forEach(color => {
-        const category = Category.create({
+      colors.forEach(async color => {
+        const category = await Category.create({
           name: `Color ${color}`,
           type: 'expense',
           color: color

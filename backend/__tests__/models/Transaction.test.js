@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { setupTestDatabase, teardownTestDatabase } from '../utils/testDb.js';
+import { setupTestDatabase, teardownTestDatabase, clearTestData } from '../utils/testDb.js';
 
 let testDb;
 let Transaction;
@@ -25,11 +25,8 @@ afterAll(() => {
   teardownTestDatabase(testDb);
 });
 
-beforeEach(() => {
-  testDb.exec('DELETE FROM transactions');
-  testDb.exec('DELETE FROM budgets');
-  testDb.exec('DELETE FROM accounts');
-  testDb.exec('DELETE FROM categories');
+beforeEach(async () => {
+  clearTestData(testDb);
 });
 
 describe('Transaction Model', () => {
@@ -37,8 +34,8 @@ describe('Transaction Model', () => {
   let expenseCategoryId;
   let incomeCategoryId;
 
-  beforeEach(() => {
-    const account = Account.create({
+  beforeEach(async () => {
+    const account = await Account.create({
       name: 'Test Account',
       type: 'bank',
       balance: 1000,
@@ -46,7 +43,7 @@ describe('Transaction Model', () => {
     });
     accountId = account.id;
 
-    const expenseCategory = Category.create({
+    const expenseCategory = await Category.create({
       name: 'Food',
       type: 'expense',
       color: '#FF6B6B',
@@ -54,7 +51,7 @@ describe('Transaction Model', () => {
     });
     expenseCategoryId = expenseCategory.id;
 
-    const incomeCategory = Category.create({
+    const incomeCategory = await Category.create({
       name: 'Salary',
       type: 'income',
       color: '#52BE80',
@@ -64,7 +61,7 @@ describe('Transaction Model', () => {
   });
 
   describe('create', () => {
-    it('should create expense transaction with all fields', () => {
+    it('should create expense transaction with all fields', async () => {
       const transactionData = {
         account_id: accountId,
         category_id: expenseCategoryId,
@@ -76,7 +73,7 @@ describe('Transaction Model', () => {
         attachment_path: '/uploads/receipt123.jpg'
       };
 
-      const transaction = Transaction.create(transactionData);
+      const transaction = await Transaction.create(transactionData);
 
       expect(transaction).toBeDefined();
       expect(transaction.id).toBeDefined();
@@ -91,8 +88,8 @@ describe('Transaction Model', () => {
       expect(transaction.created_at).toBeDefined();
     });
 
-    it('should create income transaction', () => {
-      const transaction = Transaction.create({
+    it('should create income transaction', async () => {
+      const transaction = await Transaction.create({
         account_id: accountId,
         category_id: incomeCategoryId,
         type: 'income',
@@ -106,7 +103,7 @@ describe('Transaction Model', () => {
       expect(transaction.category_name).toBe('Salary');
     });
 
-    it('should update account balance on expense creation', () => {
+    it('should update account balance on expense creation', async () => {
       Transaction.create({
         account_id: accountId,
         category_id: expenseCategoryId,
@@ -116,11 +113,11 @@ describe('Transaction Model', () => {
         description: 'Groceries'
       });
 
-      const account = Account.getById(accountId);
+      const account = await Account.getById(accountId);
       expect(account.balance).toBe(900); // 1000 - 100
     });
 
-    it('should update account balance on income creation', () => {
+    it('should update account balance on income creation', async () => {
       Transaction.create({
         account_id: accountId,
         category_id: incomeCategoryId,
@@ -130,12 +127,12 @@ describe('Transaction Model', () => {
         description: 'Freelance payment'
       });
 
-      const account = Account.getById(accountId);
+      const account = await Account.getById(accountId);
       expect(account.balance).toBe(1500); // 1000 + 500
     });
 
-    it('should include category information', () => {
-      const transaction = Transaction.create({
+    it('should include category information', async () => {
+      const transaction = await Transaction.create({
         account_id: accountId,
         category_id: expenseCategoryId,
         type: 'expense',
@@ -149,8 +146,8 @@ describe('Transaction Model', () => {
       expect(transaction.category_color).toBe('#FF6B6B');
     });
 
-    it('should create transaction without optional fields', () => {
-      const transaction = Transaction.create({
+    it('should create transaction without optional fields', async () => {
+      const transaction = await Transaction.create({
         account_id: accountId,
         category_id: expenseCategoryId,
         type: 'expense',
@@ -163,8 +160,8 @@ describe('Transaction Model', () => {
       expect(transaction.attachment_path).toBeNull();
     });
 
-    it('should handle decimal amounts correctly', () => {
-      const transaction = Transaction.create({
+    it('should handle decimal amounts correctly', async () => {
+      const transaction = await Transaction.create({
         account_id: accountId,
         category_id: expenseCategoryId,
         type: 'expense',
@@ -178,12 +175,12 @@ describe('Transaction Model', () => {
   });
 
   describe('getAll', () => {
-    it('should return empty array when no transactions exist', () => {
-      const transactions = Transaction.getAll();
+    it('should return empty array when no transactions exist', async () => {
+      const transactions = await Transaction.getAll();
       expect(transactions).toEqual([]);
     });
 
-    it('should return all transactions', () => {
+    it('should return all transactions', async () => {
       Transaction.create({
         account_id: accountId,
         category_id: expenseCategoryId,
@@ -202,12 +199,12 @@ describe('Transaction Model', () => {
         description: 'Salary'
       });
 
-      const transactions = Transaction.getAll();
+      const transactions = await Transaction.getAll();
       expect(transactions).toHaveLength(2);
     });
 
-    it('should return transactions ordered by date DESC', () => {
-      const t1 = Transaction.create({
+    it('should return transactions ordered by date DESC', async () => {
+      const t1 = await Transaction.create({
         account_id: accountId,
         category_id: expenseCategoryId,
         type: 'expense',
@@ -216,7 +213,7 @@ describe('Transaction Model', () => {
         description: 'Old transaction'
       });
 
-      const t2 = Transaction.create({
+      const t2 = await Transaction.create({
         account_id: accountId,
         category_id: expenseCategoryId,
         type: 'expense',
@@ -225,15 +222,15 @@ describe('Transaction Model', () => {
         description: 'Recent transaction'
       });
 
-      const transactions = Transaction.getAll();
+      const transactions = await Transaction.getAll();
       expect(transactions[0].id).toBe(t2.id); // Most recent first
       expect(transactions[1].id).toBe(t1.id);
     });
   });
 
   describe('getById', () => {
-    it('should return transaction by id with full details', () => {
-      const created = Transaction.create({
+    it('should return transaction by id with full details', async () => {
+      const created = await Transaction.create({
         account_id: accountId,
         category_id: expenseCategoryId,
         type: 'expense',
@@ -243,7 +240,7 @@ describe('Transaction Model', () => {
         tags: 'tech,gadgets'
       });
 
-      const transaction = Transaction.getById(created.id);
+      const transaction = await Transaction.getById(created.id);
 
       expect(transaction).toBeDefined();
       expect(transaction.id).toBe(created.id);
@@ -253,14 +250,14 @@ describe('Transaction Model', () => {
       expect(transaction.account_name).toBe('Test Account');
     });
 
-    it('should return undefined for non-existent id', () => {
-      const transaction = Transaction.getById(999);
+    it('should return undefined for non-existent id', async () => {
+      const transaction = await Transaction.getById(999);
       expect(transaction).toBeUndefined();
     });
   });
 
   describe('filtering with getAll', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
       // Create multiple transactions for filtering tests
       Transaction.create({
         account_id: accountId,
@@ -299,39 +296,39 @@ describe('Transaction Model', () => {
       });
     });
 
-    it('should filter by type', () => {
-      const expenses = Transaction.getAll({ type: 'expense' });
+    it('should filter by type', async () => {
+      const expenses = await Transaction.getAll({ type: 'expense' });
       expect(expenses).toHaveLength(2);
       expect(expenses.every(t => t.type === 'expense')).toBe(true);
 
-      const income = Transaction.getAll({ type: 'income' });
+      const income = await Transaction.getAll({ type: 'income' });
       expect(income).toHaveLength(2);
       expect(income.every(t => t.type === 'income')).toBe(true);
     });
 
-    it('should filter by account_id', () => {
-      const transactions = Transaction.getAll({ account_id: accountId });
+    it('should filter by account_id', async () => {
+      const transactions = await Transaction.getAll({ account_id: accountId });
       expect(transactions).toHaveLength(4);
     });
 
-    it('should filter by category_id', () => {
-      const expenseTransactions = Transaction.getAll({ category_id: expenseCategoryId });
+    it('should filter by category_id', async () => {
+      const expenseTransactions = await Transaction.getAll({ category_id: expenseCategoryId });
       expect(expenseTransactions).toHaveLength(2);
       expect(expenseTransactions.every(t => t.category_id === expenseCategoryId)).toBe(true);
     });
 
-    it('should filter by start_date', () => {
-      const transactions = Transaction.getAll({ start_date: '2026-02-01' });
+    it('should filter by start_date', async () => {
+      const transactions = await Transaction.getAll({ start_date: '2026-02-01' });
       expect(transactions).toHaveLength(3); // Feb and March transactions
     });
 
-    it('should filter by end_date', () => {
-      const transactions = Transaction.getAll({ end_date: '2026-02-28' });
+    it('should filter by end_date', async () => {
+      const transactions = await Transaction.getAll({ end_date: '2026-02-28' });
       expect(transactions).toHaveLength(3); // Jan and Feb transactions
     });
 
-    it('should filter by date range', () => {
-      const transactions = Transaction.getAll({
+    it('should filter by date range', async () => {
+      const transactions = await Transaction.getAll({
         start_date: '2026-02-01',
         end_date: '2026-02-28'
       });
@@ -339,8 +336,8 @@ describe('Transaction Model', () => {
       expect(transactions.every(t => t.date >= '2026-02-01' && t.date <= '2026-02-28')).toBe(true);
     });
 
-    it('should combine multiple filters', () => {
-      const transactions = Transaction.getAll({
+    it('should combine multiple filters', async () => {
+      const transactions = await Transaction.getAll({
         type: 'expense',
         start_date: '2026-02-01',
         end_date: '2026-02-28'
@@ -349,15 +346,15 @@ describe('Transaction Model', () => {
       expect(transactions[0].description).toBe('February expense');
     });
 
-    it('should return all transactions when no filters provided', () => {
-      const transactions = Transaction.getAll({});
+    it('should return all transactions when no filters provided', async () => {
+      const transactions = await Transaction.getAll({});
       expect(transactions).toHaveLength(4);
     });
   });
 
   describe('update', () => {
-    it('should update transaction fields', () => {
-      const transaction = Transaction.create({
+    it('should update transaction fields', async () => {
+      const transaction = await Transaction.create({
         account_id: accountId,
         category_id: expenseCategoryId,
         type: 'expense',
@@ -366,7 +363,7 @@ describe('Transaction Model', () => {
         description: 'Original'
       });
 
-      const updated = Transaction.update(transaction.id, {
+      const updated = await Transaction.update(transaction.id, {
         account_id: accountId,
         category_id: expenseCategoryId,
         type: 'expense',
@@ -382,8 +379,8 @@ describe('Transaction Model', () => {
       expect(updated.tags).toBe('new,tags');
     });
 
-    it('should adjust account balance when amount changes', () => {
-      const transaction = Transaction.create({
+    it('should adjust account balance when amount changes', async () => {
+      const transaction = await Transaction.create({
         account_id: accountId,
         category_id: expenseCategoryId,
         type: 'expense',
@@ -392,7 +389,7 @@ describe('Transaction Model', () => {
         description: 'Original'
       });
 
-      expect(Account.getById(accountId).balance).toBe(900); // 1000 - 100
+      expect(await Account.getById(accountId).balance).toBe(900); // 1000 - 100
 
       Transaction.update(transaction.id, {
         account_id: accountId,
@@ -403,11 +400,11 @@ describe('Transaction Model', () => {
         description: 'Original'
       });
 
-      expect(Account.getById(accountId).balance).toBe(850); // 1000 - 150
+      expect(await Account.getById(accountId).balance).toBe(850); // 1000 - 150
     });
 
-    it('should handle type change from expense to income', () => {
-      const transaction = Transaction.create({
+    it('should handle type change from expense to income', async () => {
+      const transaction = await Transaction.create({
         account_id: accountId,
         category_id: expenseCategoryId,
         type: 'expense',
@@ -416,7 +413,7 @@ describe('Transaction Model', () => {
         description: 'Expense'
       });
 
-      expect(Account.getById(accountId).balance).toBe(900); // 1000 - 100
+      expect(await Account.getById(accountId).balance).toBe(900); // 1000 - 100
 
       Transaction.update(transaction.id, {
         account_id: accountId,
@@ -427,11 +424,11 @@ describe('Transaction Model', () => {
         description: 'Income'
       });
 
-      expect(Account.getById(accountId).balance).toBe(1100); // 1000 + 100 (reversed and added)
+      expect(await Account.getById(accountId).balance).toBe(1100); // 1000 + 100 (reversed and added)
     });
 
-    it('should handle type change from income to expense', () => {
-      const transaction = Transaction.create({
+    it('should handle type change from income to expense', async () => {
+      const transaction = await Transaction.create({
         account_id: accountId,
         category_id: incomeCategoryId,
         type: 'income',
@@ -440,7 +437,7 @@ describe('Transaction Model', () => {
         description: 'Income'
       });
 
-      expect(Account.getById(accountId).balance).toBe(1100); // 1000 + 100
+      expect(await Account.getById(accountId).balance).toBe(1100); // 1000 + 100
 
       Transaction.update(transaction.id, {
         account_id: accountId,
@@ -451,13 +448,13 @@ describe('Transaction Model', () => {
         description: 'Expense'
       });
 
-      expect(Account.getById(accountId).balance).toBe(900); // 1000 - 100 (reversed and subtracted)
+      expect(await Account.getById(accountId).balance).toBe(900); // 1000 - 100 (reversed and subtracted)
     });
   });
 
   describe('delete', () => {
-    it('should delete a transaction', () => {
-      const transaction = Transaction.create({
+    it('should delete a transaction', async () => {
+      const transaction = await Transaction.create({
         account_id: accountId,
         category_id: expenseCategoryId,
         type: 'expense',
@@ -466,14 +463,14 @@ describe('Transaction Model', () => {
         description: 'To delete'
       });
 
-      const result = Transaction.delete(transaction.id);
+      const result = await Transaction.delete(transaction.id);
 
       expect(result.changes).toBe(1);
-      expect(Transaction.getById(transaction.id)).toBeUndefined();
+      expect(await Transaction.getById(transaction.id)).toBeUndefined();
     });
 
-    it('should restore account balance on expense deletion', () => {
-      const transaction = Transaction.create({
+    it('should restore account balance on expense deletion', async () => {
+      const transaction = await Transaction.create({
         account_id: accountId,
         category_id: expenseCategoryId,
         type: 'expense',
@@ -482,15 +479,15 @@ describe('Transaction Model', () => {
         description: 'Expense'
       });
 
-      expect(Account.getById(accountId).balance).toBe(900); // 1000 - 100
+      expect(await Account.getById(accountId).balance).toBe(900); // 1000 - 100
 
-      Transaction.delete(transaction.id);
+      await Transaction.delete(transaction.id);
 
-      expect(Account.getById(accountId).balance).toBe(1000); // Restored
+      expect(await Account.getById(accountId).balance).toBe(1000); // Restored
     });
 
-    it('should restore account balance on income deletion', () => {
-      const transaction = Transaction.create({
+    it('should restore account balance on income deletion', async () => {
+      const transaction = await Transaction.create({
         account_id: accountId,
         category_id: incomeCategoryId,
         type: 'income',
@@ -499,21 +496,21 @@ describe('Transaction Model', () => {
         description: 'Income'
       });
 
-      expect(Account.getById(accountId).balance).toBe(1200); // 1000 + 200
+      expect(await Account.getById(accountId).balance).toBe(1200); // 1000 + 200
 
-      Transaction.delete(transaction.id);
+      await Transaction.delete(transaction.id);
 
-      expect(Account.getById(accountId).balance).toBe(1000); // Restored
+      expect(await Account.getById(accountId).balance).toBe(1000); // Restored
     });
 
-    it('should return null for non-existent transaction', () => {
-      const result = Transaction.delete(999);
+    it('should return null for non-existent transaction', async () => {
+      const result = await Transaction.delete(999);
       expect(result).toBeNull();
     });
   });
 
   describe('getSummary', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
       // Create sample transactions
       Transaction.create({
         account_id: accountId,
@@ -552,8 +549,8 @@ describe('Transaction Model', () => {
       });
     });
 
-    it('should calculate summary without filters', () => {
-      const summary = Transaction.getSummary();
+    it('should calculate summary without filters', async () => {
+      const summary = await Transaction.getSummary();
 
       const incomeSum = summary.find(s => s.type === 'income');
       const expenseSum = summary.find(s => s.type === 'expense');
@@ -564,8 +561,8 @@ describe('Transaction Model', () => {
       expect(expenseSum.count).toBe(2);
     });
 
-    it('should calculate summary with date range filter', () => {
-      const summary = Transaction.getSummary({
+    it('should calculate summary with date range filter', async () => {
+      const summary = await Transaction.getSummary({
         start_date: '2026-03-10',
         end_date: '2026-03-20'
       });
@@ -577,10 +574,10 @@ describe('Transaction Model', () => {
       expect(expenseSum.total).toBe(250); // Both expenses
     });
 
-    it('should calculate summary filtered by type', () => {
+    it('should calculate summary filtered by type', async () => {
       // Note: getSummary doesn't filter by type, it groups by type
       // Use getAll with type filter for this use case
-      const expenseTransactions = Transaction.getAll({ type: 'expense' });
+      const expenseTransactions = await Transaction.getAll({ type: 'expense' });
       const totalExpense = expenseTransactions.reduce((sum, t) => sum + t.amount, 0);
 
       expect(totalExpense).toBe(250);
@@ -589,8 +586,8 @@ describe('Transaction Model', () => {
   });
 
   describe('edge cases', () => {
-    it('should handle special characters in description', () => {
-      const transaction = Transaction.create({
+    it('should handle special characters in description', async () => {
+      const transaction = await Transaction.create({
         account_id: accountId,
         category_id: expenseCategoryId,
         type: 'expense',
@@ -602,9 +599,9 @@ describe('Transaction Model', () => {
       expect(transaction.description).toBe("Joe's Coffee & Tea's");
     });
 
-    it('should handle very long descriptions', () => {
+    it('should handle very long descriptions', async () => {
       const longDescription = 'A'.repeat(500);
-      const transaction = Transaction.create({
+      const transaction = await Transaction.create({
         account_id: accountId,
         category_id: expenseCategoryId,
         type: 'expense',
@@ -616,8 +613,8 @@ describe('Transaction Model', () => {
       expect(transaction.description).toBe(longDescription);
     });
 
-    it('should handle multiple tags', () => {
-      const transaction = Transaction.create({
+    it('should handle multiple tags', async () => {
+      const transaction = await Transaction.create({
         account_id: accountId,
         category_id: expenseCategoryId,
         type: 'expense',
@@ -630,8 +627,8 @@ describe('Transaction Model', () => {
       expect(transaction.tags).toBe('electronics,gadgets,tech,sale');
     });
 
-    it('should handle large amounts', () => {
-      const transaction = Transaction.create({
+    it('should handle large amounts', async () => {
+      const transaction = await Transaction.create({
         account_id: accountId,
         category_id: expenseCategoryId,
         type: 'expense',
@@ -643,8 +640,8 @@ describe('Transaction Model', () => {
       expect(transaction.amount).toBe(999999.99);
     });
 
-    it('should handle zero amount', () => {
-      const transaction = Transaction.create({
+    it('should handle zero amount', async () => {
+      const transaction = await Transaction.create({
         account_id: accountId,
         category_id: expenseCategoryId,
         type: 'expense',

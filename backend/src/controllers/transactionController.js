@@ -2,7 +2,7 @@ import { Transaction } from '../models/Transaction.js';
 
 export const transactionController = {
   // GET /api/transactions
-  getAll(req, res) {
+  async getAll(req, res) {
     try {
       const filters = {
         type: req.query.type,
@@ -13,7 +13,7 @@ export const transactionController = {
         limit: req.query.limit ? parseInt(req.query.limit) : null
       };
 
-      const transactions = Transaction.getAll(filters);
+      const transactions = await Transaction.getAll(filters);
       res.json(transactions);
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -21,9 +21,9 @@ export const transactionController = {
   },
 
   // GET /api/transactions/:id
-  getById(req, res) {
+  async getById(req, res) {
     try {
-      const transaction = Transaction.getById(req.params.id);
+      const transaction = await Transaction.getById(req.params.id);
       if (!transaction) {
         return res.status(404).json({ error: 'Transaction not found' });
       }
@@ -34,9 +34,9 @@ export const transactionController = {
   },
 
   // POST /api/transactions
-  create(req, res) {
+  async create(req, res) {
     try {
-      const transaction = Transaction.create(req.body);
+      const transaction = await Transaction.create(req.body);
       res.status(201).json(transaction);
     } catch (error) {
       res.status(400).json({ error: error.message });
@@ -44,9 +44,9 @@ export const transactionController = {
   },
 
   // PUT /api/transactions/:id
-  update(req, res) {
+  async update(req, res) {
     try {
-      const transaction = Transaction.update(req.params.id, req.body);
+      const transaction = await Transaction.update(req.params.id, req.body);
       if (!transaction) {
         return res.status(404).json({ error: 'Transaction not found' });
       }
@@ -57,9 +57,9 @@ export const transactionController = {
   },
 
   // DELETE /api/transactions/:id
-  delete(req, res) {
+  async delete(req, res) {
     try {
-      const result = Transaction.delete(req.params.id);
+      const result = await Transaction.delete(req.params.id);
       if (!result) {
         return res.status(404).json({ error: 'Transaction not found' });
       }
