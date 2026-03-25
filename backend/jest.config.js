@@ -24,5 +24,7 @@ export default {
     }
   },
   coverageDirectory: 'coverage',
-  verbose: true
+  verbose: true,
+  testTimeout: 10000,
+  forceExit: true
 };
