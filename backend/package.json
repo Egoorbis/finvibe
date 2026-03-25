@@ -22,13 +22,18 @@
     "express": "^5.0.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
-    "better-sqlite3": "^11.7.0",
+    "better-sqlite3": "^12.8.0",
     "multer": "^2.1.1",
     "express-validator": "^7.2.0",
     "date-fns": "^4.1.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.9",
-    "jest": "^29.7.0"
+    "jest": "^30.3.0"
+  },
+  "overrides": {
+    "glob": "^13.0.6",
+    "inflight": "npm:@esm2cjs/inflight@^1.0.6",
+    "test-exclude": "^8.0.0"
   }
 }
