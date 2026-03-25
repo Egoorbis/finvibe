@@ -1,22 +1,9 @@
 import Database from 'better-sqlite3';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import fs from 'fs';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 // Create test database
 export function setupTestDatabase() {
-  const testDbPath = join(__dirname, '../../test.db');
-
-  // Remove existing test database
-  if (fs.existsSync(testDbPath)) {
-    fs.unlinkSync(testDbPath);
-  }
-
-  const db = new Database(testDbPath);
-  db.pragma('journal_mode = WAL');
+  // Use in-memory database for tests
+  const db = new Database(':memory:');
   db.pragma('foreign_keys = ON');
 
   // Create schema
@@ -50,7 +37,7 @@ export function setupTestDatabase() {
       date DATE NOT NULL,
       description TEXT,
       tags TEXT,
-      attachment TEXT,
+      attachment_path TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
@@ -76,11 +63,6 @@ export function setupTestDatabase() {
 export function teardownTestDatabase(db) {
   if (db) {
     db.close();
-  }
-
-  const testDbPath = join(__dirname, '../../test.db');
-  if (fs.existsSync(testDbPath)) {
-    fs.unlinkSync(testDbPath);
   }
 }
 

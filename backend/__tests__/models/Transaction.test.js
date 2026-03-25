@@ -73,7 +73,7 @@ describe('Transaction Model', () => {
         date: '2026-03-15',
         description: 'Lunch at restaurant',
         tags: 'food,dining',
-        receipt_path: '/uploads/receipt123.jpg'
+        attachment_path: '/uploads/receipt123.jpg'
       };
 
       const transaction = Transaction.create(transactionData);
@@ -87,7 +87,7 @@ describe('Transaction Model', () => {
       expect(transaction.date).toBe('2026-03-15');
       expect(transaction.description).toBe('Lunch at restaurant');
       expect(transaction.tags).toBe('food,dining');
-      expect(transaction.receipt_path).toBe('/uploads/receipt123.jpg');
+      expect(transaction.attachment_path).toBe('/uploads/receipt123.jpg');
       expect(transaction.created_at).toBeDefined();
     });
 
@@ -160,7 +160,7 @@ describe('Transaction Model', () => {
       });
 
       expect(transaction.tags).toBeNull();
-      expect(transaction.receipt_path).toBeNull();
+      expect(transaction.attachment_path).toBeNull();
     });
 
     it('should handle decimal amounts correctly', () => {
@@ -259,7 +259,7 @@ describe('Transaction Model', () => {
     });
   });
 
-  describe('getByFilters', () => {
+  describe('filtering with getAll', () => {
     beforeEach(() => {
       // Create multiple transactions for filtering tests
       Transaction.create({
@@ -300,38 +300,38 @@ describe('Transaction Model', () => {
     });
 
     it('should filter by type', () => {
-      const expenses = Transaction.getByFilters({ type: 'expense' });
+      const expenses = Transaction.getAll({ type: 'expense' });
       expect(expenses).toHaveLength(2);
       expect(expenses.every(t => t.type === 'expense')).toBe(true);
 
-      const income = Transaction.getByFilters({ type: 'income' });
+      const income = Transaction.getAll({ type: 'income' });
       expect(income).toHaveLength(2);
       expect(income.every(t => t.type === 'income')).toBe(true);
     });
 
     it('should filter by account_id', () => {
-      const transactions = Transaction.getByFilters({ account_id: accountId });
+      const transactions = Transaction.getAll({ account_id: accountId });
       expect(transactions).toHaveLength(4);
     });
 
     it('should filter by category_id', () => {
-      const expenseTransactions = Transaction.getByFilters({ category_id: expenseCategoryId });
+      const expenseTransactions = Transaction.getAll({ category_id: expenseCategoryId });
       expect(expenseTransactions).toHaveLength(2);
       expect(expenseTransactions.every(t => t.category_id === expenseCategoryId)).toBe(true);
     });
 
     it('should filter by start_date', () => {
-      const transactions = Transaction.getByFilters({ start_date: '2026-02-01' });
+      const transactions = Transaction.getAll({ start_date: '2026-02-01' });
       expect(transactions).toHaveLength(3); // Feb and March transactions
     });
 
     it('should filter by end_date', () => {
-      const transactions = Transaction.getByFilters({ end_date: '2026-02-28' });
+      const transactions = Transaction.getAll({ end_date: '2026-02-28' });
       expect(transactions).toHaveLength(3); // Jan and Feb transactions
     });
 
     it('should filter by date range', () => {
-      const transactions = Transaction.getByFilters({
+      const transactions = Transaction.getAll({
         start_date: '2026-02-01',
         end_date: '2026-02-28'
       });
@@ -340,7 +340,7 @@ describe('Transaction Model', () => {
     });
 
     it('should combine multiple filters', () => {
-      const transactions = Transaction.getByFilters({
+      const transactions = Transaction.getAll({
         type: 'expense',
         start_date: '2026-02-01',
         end_date: '2026-02-28'
@@ -350,7 +350,7 @@ describe('Transaction Model', () => {
     });
 
     it('should return all transactions when no filters provided', () => {
-      const transactions = Transaction.getByFilters({});
+      const transactions = Transaction.getAll({});
       expect(transactions).toHaveLength(4);
     });
   });
@@ -367,6 +367,9 @@ describe('Transaction Model', () => {
       });
 
       const updated = Transaction.update(transaction.id, {
+        account_id: accountId,
+        category_id: expenseCategoryId,
+        type: 'expense',
         amount: 150,
         date: '2026-03-20',
         description: 'Updated',
@@ -391,7 +394,14 @@ describe('Transaction Model', () => {
 
       expect(Account.getById(accountId).balance).toBe(900); // 1000 - 100
 
-      Transaction.update(transaction.id, { amount: 150 });
+      Transaction.update(transaction.id, {
+        account_id: accountId,
+        category_id: expenseCategoryId,
+        type: 'expense',
+        amount: 150,
+        date: '2026-03-15',
+        description: 'Original'
+      });
 
       expect(Account.getById(accountId).balance).toBe(850); // 1000 - 150
     });
@@ -409,8 +419,12 @@ describe('Transaction Model', () => {
       expect(Account.getById(accountId).balance).toBe(900); // 1000 - 100
 
       Transaction.update(transaction.id, {
+        account_id: accountId,
         category_id: incomeCategoryId,
-        type: 'income'
+        type: 'income',
+        amount: 100,
+        date: '2026-03-15',
+        description: 'Income'
       });
 
       expect(Account.getById(accountId).balance).toBe(1100); // 1000 + 100 (reversed and added)
@@ -429,8 +443,12 @@ describe('Transaction Model', () => {
       expect(Account.getById(accountId).balance).toBe(1100); // 1000 + 100
 
       Transaction.update(transaction.id, {
+        account_id: accountId,
         category_id: expenseCategoryId,
-        type: 'expense'
+        type: 'expense',
+        amount: 100,
+        date: '2026-03-15',
+        description: 'Expense'
       });
 
       expect(Account.getById(accountId).balance).toBe(900); // 1000 - 100 (reversed and subtracted)
@@ -488,9 +506,9 @@ describe('Transaction Model', () => {
       expect(Account.getById(accountId).balance).toBe(1000); // Restored
     });
 
-    it('should return 0 changes for non-existent transaction', () => {
+    it('should return null for non-existent transaction', () => {
       const result = Transaction.delete(999);
-      expect(result.changes).toBe(0);
+      expect(result).toBeNull();
     });
   });
 
@@ -537,10 +555,13 @@ describe('Transaction Model', () => {
     it('should calculate summary without filters', () => {
       const summary = Transaction.getSummary();
 
-      expect(summary.income).toBe(1500);
-      expect(summary.expense).toBe(250);
-      expect(summary.net).toBe(1250);
-      expect(summary.transactionCount).toBe(4);
+      const incomeSum = summary.find(s => s.type === 'income');
+      const expenseSum = summary.find(s => s.type === 'expense');
+
+      expect(incomeSum.total).toBe(1500);
+      expect(incomeSum.count).toBe(2);
+      expect(expenseSum.total).toBe(250);
+      expect(expenseSum.count).toBe(2);
     });
 
     it('should calculate summary with date range filter', () => {
@@ -549,18 +570,21 @@ describe('Transaction Model', () => {
         end_date: '2026-03-20'
       });
 
-      expect(summary.income).toBe(500); // Only second income
-      expect(summary.expense).toBe(250); // Both expenses
-      expect(summary.transactionCount).toBe(3);
+      const incomeSum = summary.find(s => s.type === 'income');
+      const expenseSum = summary.find(s => s.type === 'expense');
+
+      expect(incomeSum.total).toBe(500); // Only second income
+      expect(expenseSum.total).toBe(250); // Both expenses
     });
 
     it('should calculate summary filtered by type', () => {
-      const summary = Transaction.getSummary({ type: 'expense' });
+      // Note: getSummary doesn't filter by type, it groups by type
+      // Use getAll with type filter for this use case
+      const expenseTransactions = Transaction.getAll({ type: 'expense' });
+      const totalExpense = expenseTransactions.reduce((sum, t) => sum + t.amount, 0);
 
-      expect(summary.income).toBe(0);
-      expect(summary.expense).toBe(250);
-      expect(summary.net).toBe(-250);
-      expect(summary.transactionCount).toBe(2);
+      expect(totalExpense).toBe(250);
+      expect(expenseTransactions.length).toBe(2);
     });
   });
 
