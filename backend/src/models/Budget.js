@@ -2,8 +2,8 @@ import db from '../db/database.js';
 
 export const Budget = {
   // Get all budgets
-  getAll() {
-    return db.prepare(`
+  async getAll() {
+    return await db.all(`
       SELECT
         b.*,
         c.name as category_name,
@@ -12,12 +12,12 @@ export const Budget = {
       FROM budgets b
       LEFT JOIN categories c ON b.category_id = c.id
       ORDER BY b.start_date DESC
-    `).all();
+    `);
   },
 
   // Get budget by ID
-  getById(id) {
-    return db.prepare(`
+  async getById(id) {
+    return await db.get(`
       SELECT
         b.*,
         c.name as category_name,
@@ -25,13 +25,13 @@ export const Budget = {
         c.icon as category_icon
       FROM budgets b
       LEFT JOIN categories c ON b.category_id = c.id
-      WHERE b.id = ?
-    `).get(id);
+      WHERE b.id = $1
+    `, [id]);
   },
 
   // Get active budgets for a date
-  getActive(date = new Date().toISOString().split('T')[0]) {
-    return db.prepare(`
+  async getActive(date = new Date().toISOString().split('T')[0]) {
+    return await db.all(`
       SELECT
         b.*,
         c.name as category_name,
@@ -39,51 +39,57 @@ export const Budget = {
         c.icon as category_icon
       FROM budgets b
       LEFT JOIN categories c ON b.category_id = c.id
-      WHERE ? BETWEEN b.start_date AND b.end_date
+      WHERE $1 BETWEEN b.start_date AND b.end_date
       ORDER BY c.name
-    `).all(date);
+    `, [date]);
   },
 
   // Create new budget
-  create(budget) {
+  async create(budget) {
     const { category_id, amount, period, start_date, end_date } = budget;
-    const result = db.prepare(`
-      INSERT INTO budgets (category_id, amount, period, start_date, end_date)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(category_id, amount, period, start_date, end_date);
 
-    return this.getById(result.lastInsertRowid);
+    const result = await db.run(
+      `INSERT INTO budgets (category_id, amount, period, start_date, end_date)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id`,
+      [category_id, amount, period, start_date, end_date]
+    );
+
+    const id = result.lastInsertRowid || result.rows[0]?.id;
+    return await this.getById(id);
   },
 
   // Update budget
-  update(id, budget) {
+  async update(id, budget) {
     const { category_id, amount, period, start_date, end_date } = budget;
-    db.prepare(`
-      UPDATE budgets
-      SET category_id = ?, amount = ?, period = ?, start_date = ?, end_date = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).run(category_id, amount, period, start_date, end_date, id);
 
-    return this.getById(id);
+    await db.run(
+      `UPDATE budgets
+       SET category_id = $1, amount = $2, period = $3, start_date = $4, end_date = $5, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $6`,
+      [category_id, amount, period, start_date, end_date, id]
+    );
+
+    return await this.getById(id);
   },
 
   // Delete budget
-  delete(id) {
-    return db.prepare('DELETE FROM budgets WHERE id = ?').run(id);
+  async delete(id) {
+    return await db.run('DELETE FROM budgets WHERE id = $1', [id]);
   },
 
   // Get budget progress (spent vs budget)
-  getProgress(id) {
-    const budget = this.getById(id);
+  async getProgress(id) {
+    const budget = await this.getById(id);
     if (!budget) return null;
 
-    const spent = db.prepare(`
+    const spent = await db.get(`
       SELECT COALESCE(SUM(amount), 0) as total
       FROM transactions
-      WHERE category_id = ?
+      WHERE category_id = $1
         AND type = 'expense'
-        AND date BETWEEN ? AND ?
-    `).get(budget.category_id, budget.start_date, budget.end_date);
+        AND date BETWEEN $2 AND $3
+    `, [budget.category_id, budget.start_date, budget.end_date]);
 
     return {
       ...budget,
@@ -94,16 +100,17 @@ export const Budget = {
   },
 
   // Get all budget progress for active budgets
-  getAllProgress(date = new Date().toISOString().split('T')[0]) {
-    const budgets = this.getActive(date);
-    return budgets.map(budget => {
-      const spent = db.prepare(`
+  async getAllProgress(date = new Date().toISOString().split('T')[0]) {
+    const budgets = await this.getActive(date);
+
+    const progressPromises = budgets.map(async (budget) => {
+      const spent = await db.get(`
         SELECT COALESCE(SUM(amount), 0) as total
         FROM transactions
-        WHERE category_id = ?
+        WHERE category_id = $1
           AND type = 'expense'
-          AND date BETWEEN ? AND ?
-      `).get(budget.category_id, budget.start_date, budget.end_date);
+          AND date BETWEEN $2 AND $3
+      `, [budget.category_id, budget.start_date, budget.end_date]);
 
       return {
         ...budget,
@@ -112,5 +119,7 @@ export const Budget = {
         percentage: (spent.total / budget.amount) * 100
       };
     });
+
+    return await Promise.all(progressPromises);
   }
 };

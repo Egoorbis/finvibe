@@ -2,45 +2,51 @@ import db from '../db/database.js';
 
 export const Category = {
   // Get all categories
-  getAll() {
-    return db.prepare('SELECT * FROM categories ORDER BY type, name').all();
+  async getAll() {
+    return await db.all('SELECT * FROM categories ORDER BY type, name');
   },
 
   // Get categories by type
-  getByType(type) {
-    return db.prepare('SELECT * FROM categories WHERE type = ? ORDER BY name').all(type);
+  async getByType(type) {
+    return await db.all('SELECT * FROM categories WHERE type = $1 ORDER BY name', [type]);
   },
 
   // Get category by ID
-  getById(id) {
-    return db.prepare('SELECT * FROM categories WHERE id = ?').get(id);
+  async getById(id) {
+    return await db.get('SELECT * FROM categories WHERE id = $1', [id]);
   },
 
   // Create new category
-  create(category) {
+  async create(category) {
     const { name, type, color = null, icon = null } = category;
-    const result = db.prepare(`
-      INSERT INTO categories (name, type, color, icon)
-      VALUES (?, ?, ?, ?)
-    `).run(name, type, color, icon);
 
-    return this.getById(result.lastInsertRowid);
+    const result = await db.run(
+      `INSERT INTO categories (name, type, color, icon)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id`,
+      [name, type, color, icon]
+    );
+
+    const id = result.lastInsertRowid || result.rows[0]?.id;
+    return await this.getById(id);
   },
 
   // Update category
-  update(id, category) {
+  async update(id, category) {
     const { name, type, color, icon } = category;
-    db.prepare(`
-      UPDATE categories
-      SET name = ?, type = ?, color = ?, icon = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).run(name, type, color, icon, id);
 
-    return this.getById(id);
+    await db.run(
+      `UPDATE categories
+       SET name = $1, type = $2, color = $3, icon = $4, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $5`,
+      [name, type, color, icon, id]
+    );
+
+    return await this.getById(id);
   },
 
   // Delete category
-  delete(id) {
-    return db.prepare('DELETE FROM categories WHERE id = ?').run(id);
+  async delete(id) {
+    return await db.run('DELETE FROM categories WHERE id = $1', [id]);
   }
 };

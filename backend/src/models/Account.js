@@ -2,51 +2,58 @@ import db from '../db/database.js';
 
 export const Account = {
   // Get all accounts
-  getAll() {
-    return db.prepare('SELECT * FROM accounts ORDER BY created_at DESC').all();
+  async getAll() {
+    return await db.all('SELECT * FROM accounts ORDER BY created_at DESC');
   },
 
   // Get account by ID
-  getById(id) {
-    return db.prepare('SELECT * FROM accounts WHERE id = ?').get(id);
+  async getById(id) {
+    return await db.get('SELECT * FROM accounts WHERE id = $1', [id]);
   },
 
   // Create new account
-  create(account) {
+  async create(account) {
     const { name, type, balance = 0, currency = 'USD' } = account;
-    const result = db.prepare(`
-      INSERT INTO accounts (name, type, balance, currency)
-      VALUES (?, ?, ?, ?)
-    `).run(name, type, balance, currency);
 
-    return this.getById(result.lastInsertRowid);
+    const result = await db.run(
+      `INSERT INTO accounts (name, type, balance, currency)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id`,
+      [name, type, balance, currency]
+    );
+
+    const id = result.lastInsertRowid || result.rows[0]?.id;
+    return await this.getById(id);
   },
 
   // Update account
-  update(id, account) {
+  async update(id, account) {
     const { name, type, balance, currency } = account;
-    db.prepare(`
-      UPDATE accounts
-      SET name = ?, type = ?, balance = ?, currency = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).run(name, type, balance, currency, id);
 
-    return this.getById(id);
+    await db.run(
+      `UPDATE accounts
+       SET name = $1, type = $2, balance = $3, currency = $4, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $5`,
+      [name, type, balance, currency, id]
+    );
+
+    return await this.getById(id);
   },
 
   // Delete account
-  delete(id) {
-    return db.prepare('DELETE FROM accounts WHERE id = ?').run(id);
+  async delete(id) {
+    return await db.run('DELETE FROM accounts WHERE id = $1', [id]);
   },
 
   // Update account balance
-  updateBalance(id, amount) {
-    db.prepare(`
-      UPDATE accounts
-      SET balance = balance + ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).run(amount, id);
+  async updateBalance(id, amount) {
+    await db.run(
+      `UPDATE accounts
+       SET balance = balance + $1, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2`,
+      [amount, id]
+    );
 
-    return this.getById(id);
+    return await this.getById(id);
   }
 };
