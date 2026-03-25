@@ -26,11 +26,46 @@ A modern, full-stack personal finance tracker to help you manage your expenses, 
 ### Backend
 - **Node.js** - Runtime environment
 - **Express** - Web framework
-- **SQLite** - Database (better-sqlite3)
+- **PostgreSQL** - Production database
+- **SQLite** - Development/testing database (better-sqlite3)
 - **Multer** - File upload handling
 - **Express Validator** - Input validation
 
-## Prerequisites
+### DevOps
+- **Docker** - Containerization
+- **Docker Compose** - Multi-container orchestration
+- **Nginx** - Production web server
+
+## Deployment Options
+
+### Option 1: Docker Deployment (Recommended for Production)
+
+The easiest way to deploy FinVibe is using Docker. See the **[Docker Setup Guide](DOCKER_SETUP.md)** for comprehensive instructions.
+
+**Quick Docker Start:**
+```bash
+# Copy environment file
+cp .env.example .env
+
+# Start all services
+docker-compose up -d
+
+# Initialize database
+docker-compose exec backend npm run migrate
+docker-compose exec backend npm run seed
+```
+
+**Access:**
+- Frontend: http://localhost
+- Backend API: http://localhost:3000
+
+**For detailed instructions, troubleshooting, and production deployment, see [DOCKER_SETUP.md](DOCKER_SETUP.md)**
+
+### Option 2: Local Development Setup
+
+For local development without Docker:
+
+#### Prerequisites
 
 Before you begin, ensure you have the following installed:
 - **Node.js** (v18 or higher) - [Download here](https://nodejs.org/)
@@ -44,15 +79,15 @@ npm --version
 git --version
 ```
 
-## Getting Started
+#### Getting Started
 
-### 1. Clone the Repository
+#### 1. Clone the Repository
 ```bash
 git clone https://github.com/Egoorbis/finvibe.git
 cd finvibe
 ```
 
-### 2. Set Up the Backend
+#### 2. Set Up the Backend
 
 ```bash
 # Navigate to backend directory
@@ -65,10 +100,10 @@ npm install
 cp .env.example .env
 
 # Initialize the database
-npm run db:migrate
+npm run migrate
 
 # Seed default categories
-npm run db:seed
+npm run seed
 
 # Start the development server
 npm run dev
@@ -76,7 +111,7 @@ npm run dev
 
 The backend API will run on `http://localhost:3000`
 
-### 3. Set Up the Frontend
+#### 3. Set Up the Frontend
 
 Open a new terminal window:
 
@@ -96,12 +131,21 @@ npm run dev
 
 The frontend will run on `http://localhost:5173`
 
-### 4. Access the Application
+#### 4. Access the Application
 
 Open your browser and navigate to:
 ```
 http://localhost:5173
 ```
+
+---
+
+## Documentation
+
+- **[Docker Setup Guide](DOCKER_SETUP.md)** - Complete guide for Docker deployment, verification, and troubleshooting
+- **[Environment Variables](ENVIRONMENT.md)** - Comprehensive environment configuration documentation
+
+---
 
 ## Project Structure
 

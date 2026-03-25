@@ -1,9 +1,9 @@
 import db from './database.js';
+import { Category } from '../models/Category.js';
 
 console.log('Seeding database with default categories...');
 
 const defaultCategories = [
-  // Expense categories
   { name: 'Food & Dining', type: 'expense', color: '#FF6B6B', icon: '🍽️' },
   { name: 'Groceries', type: 'expense', color: '#4ECDC4', icon: '🛒' },
   { name: 'Transportation', type: 'expense', color: '#45B7D1', icon: '🚗' },
@@ -19,8 +19,6 @@ const defaultCategories = [
   { name: 'Gifts & Donations', type: 'expense', color: '#FF6348', icon: '🎁' },
   { name: 'Subscriptions', type: 'expense', color: '#2ED573', icon: '📱' },
   { name: 'Other Expenses', type: 'expense', color: '#A4B0BE', icon: '💸' },
-
-  // Income categories
   { name: 'Salary', type: 'income', color: '#26DE81', icon: '💰' },
   { name: 'Freelance', type: 'income', color: '#20BF6B', icon: '💼' },
   { name: 'Business', type: 'income', color: '#0FB9B1', icon: '🏢' },
@@ -30,28 +28,42 @@ const defaultCategories = [
   { name: 'Other Income', type: 'income', color: '#6C5CE7', icon: '💳' }
 ];
 
-const insert = db.prepare(`
-  INSERT INTO categories (name, type, color, icon)
-  VALUES (?, ?, ?, ?)
-`);
+async function seedDatabase() {
+  try {
+    let seededCount = 0;
+    let existingCount = 0;
+    const expenseCategories = defaultCategories.filter(c => c.type === 'expense');
+    const incomeCategories = defaultCategories.filter(c => c.type === 'income');
 
-const insertMany = db.transaction((categories) => {
-  for (const category of categories) {
-    insert.run(category.name, category.type, category.color, category.icon);
-  }
-});
+    for (const category of defaultCategories) {
+      try {
+        await Category.create(category);
+        seededCount++;
+      } catch (error) {
+        if (error.message && error.message.includes('UNIQUE')) {
+          existingCount++;
+        } else {
+          console.error('Error seeding category:', category.name, error.message);
+        }
+      }
+    }
 
-try {
-  insertMany(defaultCategories);
-  console.log(`✅ Successfully seeded ${defaultCategories.length} default categories!`);
-  console.log(`   - ${defaultCategories.filter(c => c.type === 'expense').length} expense categories`);
-  console.log(`   - ${defaultCategories.filter(c => c.type === 'income').length} income categories`);
-} catch (error) {
-  if (error.message.includes('UNIQUE constraint')) {
-    console.log('ℹ️  Categories already exist, skipping seed.');
-  } else {
-    console.error('❌ Error seeding categories:', error.message);
+    if (seededCount > 0) {
+      console.log('Successfully seeded', seededCount, 'new categories!');
+      console.log('  -', expenseCategories.length, 'expense categories');
+      console.log('  -', incomeCategories.length, 'income categories');
+    }
+
+    if (existingCount > 0) {
+      console.log(existingCount, 'categories already exist, skipped.');
+    }
+  } catch (error) {
+    console.error('Error during seeding:', error.message);
+    process.exit(1);
+  } finally {
+    await db.close();
+    process.exit(0);
   }
 }
 
-db.close();
+seedDatabase();
