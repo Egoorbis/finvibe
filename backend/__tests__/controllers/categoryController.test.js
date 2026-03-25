@@ -61,7 +61,7 @@ describe('Category Controller', () => {
 
   describe('GET /api/categories/:id', () => {
     it('should return category by id', async () => {
-      const category = Category.create({
+      const category = await Category.create({
         name: 'Transport',
         type: 'expense',
         color: '#4ECDC4',
@@ -112,7 +112,7 @@ describe('Category Controller', () => {
 
   describe('PUT /api/categories/:id', () => {
     it('should update an existing category', async () => {
-      const category = Category.create({
+      const category = await Category.create({
         name: 'Old Name',
         type: 'expense',
         color: '#FF0000',
@@ -145,7 +145,7 @@ describe('Category Controller', () => {
 
   describe('DELETE /api/categories/:id', () => {
     it('should delete a category', async () => {
-      const category = Category.create({
+      const category = await Category.create({
         name: 'To Delete',
         type: 'expense',
         color: '#FF0000',

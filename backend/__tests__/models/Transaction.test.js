@@ -104,7 +104,7 @@ describe('Transaction Model', () => {
     });
 
     it('should update account balance on expense creation', async () => {
-      Transaction.create({
+      await Transaction.create({
         account_id: accountId,
         category_id: expenseCategoryId,
         type: 'expense',
@@ -118,7 +118,7 @@ describe('Transaction Model', () => {
     });
 
     it('should update account balance on income creation', async () => {
-      Transaction.create({
+      await Transaction.create({
         account_id: accountId,
         category_id: incomeCategoryId,
         type: 'income',
@@ -181,7 +181,7 @@ describe('Transaction Model', () => {
     });
 
     it('should return all transactions', async () => {
-      Transaction.create({
+      await Transaction.create({
         account_id: accountId,
         category_id: expenseCategoryId,
         type: 'expense',
@@ -190,7 +190,7 @@ describe('Transaction Model', () => {
         description: 'Groceries'
       });
 
-      Transaction.create({
+      await Transaction.create({
         account_id: accountId,
         category_id: incomeCategoryId,
         type: 'income',
@@ -259,7 +259,7 @@ describe('Transaction Model', () => {
   describe('filtering with getAll', () => {
     beforeEach(async () => {
       // Create multiple transactions for filtering tests
-      Transaction.create({
+      await Transaction.create({
         account_id: accountId,
         category_id: expenseCategoryId,
         type: 'expense',
@@ -268,7 +268,7 @@ describe('Transaction Model', () => {
         description: 'January expense'
       });
 
-      Transaction.create({
+      await Transaction.create({
         account_id: accountId,
         category_id: expenseCategoryId,
         type: 'expense',
@@ -277,7 +277,7 @@ describe('Transaction Model', () => {
         description: 'February expense'
       });
 
-      Transaction.create({
+      await Transaction.create({
         account_id: accountId,
         category_id: incomeCategoryId,
         type: 'income',
@@ -286,7 +286,7 @@ describe('Transaction Model', () => {
         description: 'February income'
       });
 
-      Transaction.create({
+      await Transaction.create({
         account_id: accountId,
         category_id: incomeCategoryId,
         type: 'income',
@@ -389,9 +389,9 @@ describe('Transaction Model', () => {
         description: 'Original'
       });
 
-      expect(await Account.getById(accountId).balance).toBe(900); // 1000 - 100
+      expect((await Account.getById(accountId)).balance).toBe(900); // 1000 - 100
 
-      Transaction.update(transaction.id, {
+      await Transaction.update(transaction.id, {
         account_id: accountId,
         category_id: expenseCategoryId,
         type: 'expense',
@@ -400,7 +400,7 @@ describe('Transaction Model', () => {
         description: 'Original'
       });
 
-      expect(await Account.getById(accountId).balance).toBe(850); // 1000 - 150
+      expect((await Account.getById(accountId)).balance).toBe(850); // 1000 - 150
     });
 
     it('should handle type change from expense to income', async () => {
@@ -413,9 +413,9 @@ describe('Transaction Model', () => {
         description: 'Expense'
       });
 
-      expect(await Account.getById(accountId).balance).toBe(900); // 1000 - 100
+      expect((await Account.getById(accountId)).balance).toBe(900); // 1000 - 100
 
-      Transaction.update(transaction.id, {
+      await Transaction.update(transaction.id, {
         account_id: accountId,
         category_id: incomeCategoryId,
         type: 'income',
@@ -424,7 +424,7 @@ describe('Transaction Model', () => {
         description: 'Income'
       });
 
-      expect(await Account.getById(accountId).balance).toBe(1100); // 1000 + 100 (reversed and added)
+      expect((await Account.getById(accountId)).balance).toBe(1100); // 1000 + 100 (reversed and added)
     });
 
     it('should handle type change from income to expense', async () => {
@@ -437,9 +437,9 @@ describe('Transaction Model', () => {
         description: 'Income'
       });
 
-      expect(await Account.getById(accountId).balance).toBe(1100); // 1000 + 100
+      expect((await Account.getById(accountId)).balance).toBe(1100); // 1000 + 100
 
-      Transaction.update(transaction.id, {
+      await Transaction.update(transaction.id, {
         account_id: accountId,
         category_id: expenseCategoryId,
         type: 'expense',
@@ -448,7 +448,7 @@ describe('Transaction Model', () => {
         description: 'Expense'
       });
 
-      expect(await Account.getById(accountId).balance).toBe(900); // 1000 - 100 (reversed and subtracted)
+      expect((await Account.getById(accountId)).balance).toBe(900); // 1000 - 100 (reversed and subtracted)
     });
   });
 
@@ -479,11 +479,11 @@ describe('Transaction Model', () => {
         description: 'Expense'
       });
 
-      expect(await Account.getById(accountId).balance).toBe(900); // 1000 - 100
+      expect((await Account.getById(accountId)).balance).toBe(900); // 1000 - 100
 
       await Transaction.delete(transaction.id);
 
-      expect(await Account.getById(accountId).balance).toBe(1000); // Restored
+      expect((await Account.getById(accountId)).balance).toBe(1000); // Restored
     });
 
     it('should restore account balance on income deletion', async () => {
@@ -496,11 +496,11 @@ describe('Transaction Model', () => {
         description: 'Income'
       });
 
-      expect(await Account.getById(accountId).balance).toBe(1200); // 1000 + 200
+      expect((await Account.getById(accountId)).balance).toBe(1200); // 1000 + 200
 
       await Transaction.delete(transaction.id);
 
-      expect(await Account.getById(accountId).balance).toBe(1000); // Restored
+      expect((await Account.getById(accountId)).balance).toBe(1000); // Restored
     });
 
     it('should return null for non-existent transaction', async () => {
@@ -512,7 +512,7 @@ describe('Transaction Model', () => {
   describe('getSummary', () => {
     beforeEach(async () => {
       // Create sample transactions
-      Transaction.create({
+      await Transaction.create({
         account_id: accountId,
         category_id: expenseCategoryId,
         type: 'expense',
@@ -521,7 +521,7 @@ describe('Transaction Model', () => {
         description: 'Expense 1'
       });
 
-      Transaction.create({
+      await Transaction.create({
         account_id: accountId,
         category_id: expenseCategoryId,
         type: 'expense',
@@ -530,7 +530,7 @@ describe('Transaction Model', () => {
         description: 'Expense 2'
       });
 
-      Transaction.create({
+      await Transaction.create({
         account_id: accountId,
         category_id: incomeCategoryId,
         type: 'income',
@@ -539,7 +539,7 @@ describe('Transaction Model', () => {
         description: 'Income 1'
       });
 
-      Transaction.create({
+      await Transaction.create({
         account_id: accountId,
         category_id: incomeCategoryId,
         type: 'income',

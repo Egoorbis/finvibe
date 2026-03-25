@@ -50,7 +50,7 @@ describe('Account Controller', () => {
 
   describe('GET /api/accounts/:id', () => {
     it('should return account by id', async () => {
-      const account = Account.create({ name: 'Test Account', type: 'bank', balance: 500 });
+      const account = await Account.create({ name: 'Test Account', type: 'bank', balance: 500 });
 
       const response = await request(app).get(`/api/accounts/${account.id}`);
 
@@ -96,7 +96,7 @@ describe('Account Controller', () => {
 
   describe('PUT /api/accounts/:id', () => {
     it('should update an existing account', async () => {
-      const account = Account.create({ name: 'Old Name', type: 'bank' });
+      const account = await Account.create({ name: 'Old Name', type: 'bank' });
 
       const response = await request(app)
         .put(`/api/accounts/${account.id}`)
@@ -123,7 +123,7 @@ describe('Account Controller', () => {
 
   describe('DELETE /api/accounts/:id', () => {
     it('should delete an account', async () => {
-      const account = Account.create({ name: 'To Delete', type: 'bank' });
+      const account = await Account.create({ name: 'To Delete', type: 'bank' });
 
       const response = await request(app).delete(`/api/accounts/${account.id}`);
 

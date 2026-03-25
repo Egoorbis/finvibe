@@ -4,6 +4,8 @@ import { setupTestDatabase, teardownTestDatabase, seedTestData, clearTestData } 
 let testDb;
 let Budget;
 let Category;
+let Account;
+let Transaction;
 
 beforeAll(async () => {
   testDb = setupTestDatabase();
@@ -14,8 +16,12 @@ beforeAll(async () => {
 
   const budgetModule = await import('../../src/models/Budget.js');
   const categoryModule = await import('../../src/models/Category.js');
+  const accountModule = await import('../../src/models/Account.js');
+  const transactionModule = await import('../../src/models/Transaction.js');
   Budget = budgetModule.Budget;
   Category = categoryModule.Category;
+  Account = accountModule.Account;
+  Transaction = transactionModule.Transaction;
 });
 
 afterAll(() => {
@@ -288,10 +294,12 @@ describe('Budget Model', () => {
 
     beforeEach(async () => {
       // Create account and transaction for progress testing
-      const account = testDb.prepare(`
-        INSERT INTO accounts (name, type, balance) VALUES (?, ?, ?)
-      `).run('Test Account', 'bank', 1000);
-      accountId = account.lastInsertRowid;
+      const account = await Account.create({
+        name: 'Test Account',
+        type: 'bank',
+        balance: 1000
+      });
+      accountId = account.id;
     });
 
     it('should calculate budget progress with no spending', async () => {
@@ -321,15 +329,23 @@ describe('Budget Model', () => {
       });
 
       // Add some transactions
-      testDb.prepare(`
-        INSERT INTO transactions (account_id, category_id, type, amount, date, description)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(accountId, expenseCategoryId, 'expense', 150, '2026-03-10', 'Groceries');
+      await Transaction.create({
+        account_id: accountId,
+        category_id: expenseCategoryId,
+        type: 'expense',
+        amount: 150,
+        date: '2026-03-10',
+        description: 'Groceries'
+      });
 
-      testDb.prepare(`
-        INSERT INTO transactions (account_id, category_id, type, amount, date, description)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(accountId, expenseCategoryId, 'expense', 100, '2026-03-15', 'Restaurant');
+      await Transaction.create({
+        account_id: accountId,
+        category_id: expenseCategoryId,
+        type: 'expense',
+        amount: 100,
+        date: '2026-03-15',
+        description: 'Restaurant'
+      });
 
       const progress = await Budget.getProgress(budget.id);
 
@@ -347,10 +363,14 @@ describe('Budget Model', () => {
         end_date: '2026-03-31'
       });
 
-      testDb.prepare(`
-        INSERT INTO transactions (account_id, category_id, type, amount, date, description)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(accountId, expenseCategoryId, 'expense', 400, '2026-03-10', 'Big purchase');
+      await Transaction.create({
+        account_id: accountId,
+        category_id: expenseCategoryId,
+        type: 'expense',
+        amount: 400,
+        date: '2026-03-10',
+        description: 'Big purchase'
+      });
 
       const progress = await Budget.getProgress(budget.id);
 
@@ -369,22 +389,34 @@ describe('Budget Model', () => {
       });
 
       // Transaction before period
-      testDb.prepare(`
-        INSERT INTO transactions (account_id, category_id, type, amount, date, description)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(accountId, expenseCategoryId, 'expense', 100, '2026-02-28', 'Before');
+      await Transaction.create({
+        account_id: accountId,
+        category_id: expenseCategoryId,
+        type: 'expense',
+        amount: 100,
+        date: '2026-02-28',
+        description: 'Before'
+      });
 
       // Transaction in period
-      testDb.prepare(`
-        INSERT INTO transactions (account_id, category_id, type, amount, date, description)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(accountId, expenseCategoryId, 'expense', 150, '2026-03-15', 'During');
+      await Transaction.create({
+        account_id: accountId,
+        category_id: expenseCategoryId,
+        type: 'expense',
+        amount: 150,
+        date: '2026-03-15',
+        description: 'During'
+      });
 
       // Transaction after period
-      testDb.prepare(`
-        INSERT INTO transactions (account_id, category_id, type, amount, date, description)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(accountId, expenseCategoryId, 'expense', 100, '2026-04-01', 'After');
+      await Transaction.create({
+        account_id: accountId,
+        category_id: expenseCategoryId,
+        type: 'expense',
+        amount: 100,
+        date: '2026-04-01',
+        description: 'After'
+      });
 
       const progress = await Budget.getProgress(budget.id);
 
