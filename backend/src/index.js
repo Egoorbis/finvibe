@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 // Import routes
+import authRoutes from './routes/auth.js';
 import accountRoutes from './routes/accounts.js';
 import categoryRoutes from './routes/categories.js';
 import transactionRoutes from './routes/transactions.js';
@@ -29,6 +30,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(join(__dirname, '../uploads')));
 
 // API Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/accounts', accountRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/transactions', transactionRoutes);
@@ -46,6 +48,7 @@ app.get('/', (req, res) => {
     message: 'Welcome to FinVibe API',
     version: '1.0.0',
     endpoints: {
+      auth: '/api/auth',
       accounts: '/api/accounts',
       categories: '/api/categories',
       transactions: '/api/transactions',

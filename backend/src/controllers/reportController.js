@@ -9,7 +9,7 @@ export const reportController = {
         end_date: req.query.end_date
       };
 
-      const summary = await Transaction.getSummary(filters);
+      const summary = await Transaction.getSummary(req.user.id, filters);
 
       // Format the response
       const result = {
@@ -34,7 +34,7 @@ export const reportController = {
         end_date: req.query.end_date
       };
 
-      const categoryData = await Transaction.getByCategory(filters);
+      const categoryData = await Transaction.getByCategory(req.user.id, filters);
       res.json(categoryData);
     } catch (error) {
       res.status(500).json({ error: error.message });

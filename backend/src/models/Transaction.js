@@ -2,7 +2,7 @@ import db from '../db/database.js';
 
 export const Transaction = {
   // Get all transactions with account and category details
-  async getAll(filters = {}) {
+  async getAll(userId, filters = {}) {
     let query = `
       SELECT
         t.*,
@@ -14,11 +14,11 @@ export const Transaction = {
       FROM transactions t
       LEFT JOIN accounts a ON t.account_id = a.id
       LEFT JOIN categories c ON t.category_id = c.id
-      WHERE 1=1
+      WHERE t.user_id = $1
     `;
 
-    const params = [];
-    let paramIndex = 1;
+    const params = [userId];
+    let paramIndex = 2;
 
     if (filters.type) {
       query += ` AND t.type = $${paramIndex}`;
@@ -60,8 +60,8 @@ export const Transaction = {
     return await db.all(query, params);
   },
 
-  // Get transaction by ID
-  async getById(id) {
+  // Get transaction by ID (with user check)
+  async getById(id, userId) {
     return await db.get(`
       SELECT
         t.*,
@@ -73,12 +73,12 @@ export const Transaction = {
       FROM transactions t
       LEFT JOIN accounts a ON t.account_id = a.id
       LEFT JOIN categories c ON t.category_id = c.id
-      WHERE t.id = $1
-    `, [id]);
+      WHERE t.id = $1 AND t.user_id = $2
+    `, [id, userId]);
   },
 
   // Create new transaction
-  async create(transaction) {
+  async create(transaction, userId) {
     const {
       date,
       amount,
@@ -91,10 +91,10 @@ export const Transaction = {
     } = transaction;
 
     const result = await db.run(
-      `INSERT INTO transactions (date, amount, type, description, account_id, category_id, tags, attachment_path)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO transactions (user_id, date, amount, type, description, account_id, category_id, tags, attachment_path)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING id`,
-      [date, amount, type, description, account_id, category_id, tags, attachment_path]
+      [userId, date, amount, type, description, account_id, category_id, tags, attachment_path]
     );
 
     // Update account balance
@@ -102,17 +102,17 @@ export const Transaction = {
     await db.run(
       `UPDATE accounts
        SET balance = balance + $1, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $2`,
-      [balanceChange, account_id]
+       WHERE id = $2 AND user_id = $3`,
+      [balanceChange, account_id, userId]
     );
 
     const id = result.lastInsertRowid || result.rows[0]?.id;
-    return await this.getById(id);
+    return await this.getById(id, userId);
   },
 
   // Update transaction
-  async update(id, transaction) {
-    const oldTransaction = await this.getById(id);
+  async update(id, transaction, userId) {
+    const oldTransaction = await this.getById(id, userId);
     if (!oldTransaction) return null;
 
     const {
@@ -131,8 +131,8 @@ export const Transaction = {
     await db.run(
       `UPDATE accounts
        SET balance = balance + $1, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $2`,
-      [oldBalanceChange, oldTransaction.account_id]
+       WHERE id = $2 AND user_id = $3`,
+      [oldBalanceChange, oldTransaction.account_id, userId]
     );
 
     // Apply new balance change
@@ -140,8 +140,8 @@ export const Transaction = {
     await db.run(
       `UPDATE accounts
        SET balance = balance + $1, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $2`,
-      [newBalanceChange, account_id]
+       WHERE id = $2 AND user_id = $3`,
+      [newBalanceChange, account_id, userId]
     );
 
     // Update transaction
@@ -149,16 +149,16 @@ export const Transaction = {
       `UPDATE transactions
        SET date = $1, amount = $2, type = $3, description = $4, account_id = $5,
            category_id = $6, tags = $7, attachment_path = $8, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $9`,
-      [date, amount, type, description, account_id, category_id, tags, attachment_path, id]
+       WHERE id = $9 AND user_id = $10`,
+      [date, amount, type, description, account_id, category_id, tags, attachment_path, id, userId]
     );
 
-    return await this.getById(id);
+    return await this.getById(id, userId);
   },
 
   // Delete transaction
-  async delete(id) {
-    const transaction = await this.getById(id);
+  async delete(id, userId) {
+    const transaction = await this.getById(id, userId);
     if (!transaction) return null;
 
     // Revert balance change
@@ -166,15 +166,15 @@ export const Transaction = {
     await db.run(
       `UPDATE accounts
        SET balance = balance + $1, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $2`,
-      [balanceChange, transaction.account_id]
+       WHERE id = $2 AND user_id = $3`,
+      [balanceChange, transaction.account_id, userId]
     );
 
-    return await db.run('DELETE FROM transactions WHERE id = $1', [id]);
+    return await db.run('DELETE FROM transactions WHERE id = $1 AND user_id = $2', [id, userId]);
   },
 
   // Get summary statistics
-  async getSummary(filters = {}) {
+  async getSummary(userId, filters = {}) {
     let query = `
       SELECT
         type,
@@ -182,11 +182,11 @@ export const Transaction = {
         SUM(amount) as total,
         AVG(amount) as average
       FROM transactions
-      WHERE 1=1
+      WHERE user_id = $1
     `;
 
-    const params = [];
-    let paramIndex = 1;
+    const params = [userId];
+    let paramIndex = 2;
 
     if (filters.start_date) {
       query += ` AND date >= $${paramIndex}`;
@@ -205,7 +205,7 @@ export const Transaction = {
   },
 
   // Get spending by category
-  async getByCategory(filters = {}) {
+  async getByCategory(userId, filters = {}) {
     let query = `
       SELECT
         c.id,
@@ -217,11 +217,11 @@ export const Transaction = {
         SUM(t.amount) as total
       FROM transactions t
       LEFT JOIN categories c ON t.category_id = c.id
-      WHERE 1=1
+      WHERE t.user_id = $1
     `;
 
-    const params = [];
-    let paramIndex = 1;
+    const params = [userId];
+    let paramIndex = 2;
 
     if (filters.type) {
       query += ` AND t.type = $${paramIndex}`;

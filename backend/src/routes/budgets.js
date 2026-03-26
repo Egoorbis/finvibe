@@ -1,7 +1,11 @@
 import express from 'express';
 import { budgetController } from '../controllers/budgetController.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// All routes require authentication
+router.use(authenticate);
 
 router.get('/', budgetController.getAll);
 router.get('/active', budgetController.getActive);

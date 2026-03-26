@@ -13,7 +13,7 @@ export const transactionController = {
         limit: req.query.limit ? parseInt(req.query.limit) : null
       };
 
-      const transactions = await Transaction.getAll(filters);
+      const transactions = await Transaction.getAll(req.user.id, filters);
       res.json(transactions);
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -23,7 +23,7 @@ export const transactionController = {
   // GET /api/transactions/:id
   async getById(req, res) {
     try {
-      const transaction = await Transaction.getById(req.params.id);
+      const transaction = await Transaction.getById(req.params.id, req.user.id);
       if (!transaction) {
         return res.status(404).json({ error: 'Transaction not found' });
       }
@@ -36,7 +36,7 @@ export const transactionController = {
   // POST /api/transactions
   async create(req, res) {
     try {
-      const transaction = await Transaction.create(req.body);
+      const transaction = await Transaction.create(req.body, req.user.id);
       res.status(201).json(transaction);
     } catch (error) {
       res.status(400).json({ error: error.message });
@@ -46,7 +46,7 @@ export const transactionController = {
   // PUT /api/transactions/:id
   async update(req, res) {
     try {
-      const transaction = await Transaction.update(req.params.id, req.body);
+      const transaction = await Transaction.update(req.params.id, req.body, req.user.id);
       if (!transaction) {
         return res.status(404).json({ error: 'Transaction not found' });
       }
@@ -59,7 +59,7 @@ export const transactionController = {
   // DELETE /api/transactions/:id
   async delete(req, res) {
     try {
-      const result = await Transaction.delete(req.params.id);
+      const result = await Transaction.delete(req.params.id, req.user.id);
       if (!result) {
         return res.status(404).json({ error: 'Transaction not found' });
       }
