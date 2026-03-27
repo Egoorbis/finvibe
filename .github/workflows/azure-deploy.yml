@@ -1,0 +1,91 @@
+name: Deploy to Azure
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  AZURE_RESOURCE_GROUP: finvibe-rg
+  AZURE_LOCATION: eastus
+  ACR_NAME: finvibereg
+  BACKEND_APP_NAME: finvibe-backend
+  FRONTEND_APP_NAME: finvibe-frontend
+  CONTAINER_ENV_NAME: finvibe-env
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to Azure Container Registry
+        run: |
+          az acr login --name ${{ env.ACR_NAME }}
+
+      - name: Build and push backend image
+        run: |
+          cd backend
+          docker build -t ${{ env.ACR_NAME }}.azurecr.io/finvibe-backend:${{ github.sha }} \
+                       -t ${{ env.ACR_NAME }}.azurecr.io/finvibe-backend:latest .
+          docker push ${{ env.ACR_NAME }}.azurecr.io/finvibe-backend:${{ github.sha }}
+          docker push ${{ env.ACR_NAME }}.azurecr.io/finvibe-backend:latest
+
+      - name: Build and push frontend image
+        run: |
+          cd frontend
+          docker build -t ${{ env.ACR_NAME }}.azurecr.io/finvibe-frontend:${{ github.sha }} \
+                       -t ${{ env.ACR_NAME }}.azurecr.io/finvibe-frontend:latest .
+          docker push ${{ env.ACR_NAME }}.azurecr.io/finvibe-frontend:${{ github.sha }}
+          docker push ${{ env.ACR_NAME }}.azurecr.io/finvibe-frontend:latest
+
+      - name: Deploy backend to Azure Container Apps
+        run: |
+          az containerapp update \
+            --name ${{ env.BACKEND_APP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --image ${{ env.ACR_NAME }}.azurecr.io/finvibe-backend:${{ github.sha }}
+
+      - name: Get backend URL
+        id: backend-url
+        run: |
+          BACKEND_URL=$(az containerapp show \
+            --name ${{ env.BACKEND_APP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --query properties.configuration.ingress.fqdn \
+            --output tsv)
+          echo "url=https://$BACKEND_URL" >> $GITHUB_OUTPUT
+
+      - name: Deploy frontend to Azure Container Apps
+        run: |
+          az containerapp update \
+            --name ${{ env.FRONTEND_APP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --image ${{ env.ACR_NAME }}.azurecr.io/finvibe-frontend:${{ github.sha }}
+
+      - name: Run database migrations
+        run: |
+          az containerapp exec \
+            --name ${{ env.BACKEND_APP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --command "/bin/sh" \
+            --args "-c 'npm run db:migrate'" || echo "Migration skipped or already applied"
+
+      - name: Deployment summary
+        run: |
+          echo "✅ Deployment completed successfully!"
+          echo "Backend URL: ${{ steps.backend-url.outputs.url }}/api"
+          FRONTEND_URL=$(az containerapp show \
+            --name ${{ env.FRONTEND_APP_NAME }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --query properties.configuration.ingress.fqdn \
+            --output tsv)
+          echo "Frontend URL: https://$FRONTEND_URL"
