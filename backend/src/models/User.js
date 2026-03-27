@@ -111,5 +111,71 @@ export const User = {
     // Return user without password
     const { password: _, ...userWithoutPassword } = user;
     return userWithoutPassword;
+  },
+
+  // Set password reset token
+  async setResetToken(id, token, expires) {
+    await db.run(
+      `UPDATE users
+       SET reset_token = $1, reset_token_expires = $2, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $3`,
+      [token, expires, id]
+    );
+  },
+
+  // Get user by reset token
+  async getByResetToken(token) {
+    return await db.get(
+      'SELECT * FROM users WHERE reset_token = $1',
+      [token]
+    );
+  },
+
+  // Clear reset token
+  async clearResetToken(id) {
+    await db.run(
+      `UPDATE users
+       SET reset_token = NULL, reset_token_expires = NULL, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1`,
+      [id]
+    );
+  },
+
+  // Set verification token
+  async setVerificationToken(id, token, expires) {
+    await db.run(
+      `UPDATE users
+       SET verification_token = $1, verification_token_expires = $2, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $3`,
+      [token, expires, id]
+    );
+  },
+
+  // Get user by verification token
+  async getByVerificationToken(token) {
+    return await db.get(
+      'SELECT * FROM users WHERE verification_token = $1',
+      [token]
+    );
+  },
+
+  // Verify email
+  async verifyEmail(id) {
+    await db.run(
+      `UPDATE users
+       SET email_verified = 1, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1`,
+      [id]
+    );
+  },
+
+  // Clear verification token
+  async clearVerificationToken(id) {
+    await db.run(
+      `UPDATE users
+       SET verification_token = NULL, verification_token_expires = NULL, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1`,
+      [id]
+    );
   }
 };

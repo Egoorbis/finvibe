@@ -27,6 +27,11 @@ await db.exec(`
     username VARCHAR(255) NOT NULL UNIQUE,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
+    email_verified INTEGER DEFAULT 0,
+    verification_token VARCHAR(255),
+    verification_token_expires TIMESTAMP,
+    reset_token VARCHAR(255),
+    reset_token_expires TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )
@@ -105,6 +110,8 @@ await db.exec(`
 await db.exec(`
   CREATE INDEX idx_users_email ON users(email);
   CREATE INDEX idx_users_username ON users(username);
+  CREATE INDEX idx_users_reset_token ON users(reset_token);
+  CREATE INDEX idx_users_verification_token ON users(verification_token);
   CREATE INDEX idx_accounts_user ON accounts(user_id);
   CREATE INDEX idx_categories_user ON categories(user_id);
   CREATE INDEX idx_transactions_user ON transactions(user_id);
