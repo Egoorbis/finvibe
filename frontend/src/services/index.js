@@ -1,4 +1,5 @@
 import api from './api';
+export { default as authService } from './authService';
 
 export const accountService = {
   getAll: () => api.get('/accounts'),
