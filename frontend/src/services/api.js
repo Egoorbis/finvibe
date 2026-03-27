@@ -9,10 +9,17 @@ const api = axios.create({
   },
 });
 
-// Request interceptor for debugging
+// Request interceptor for adding auth token and debugging
 api.interceptors.request.use(
   (config) => {
     console.log(`API Request: ${config.method.toUpperCase()} ${config.url}`);
+
+    // Add auth token to requests
+    const token = localStorage.getItem('finvibe_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
     return config;
   },
   (error) => {
