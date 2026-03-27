@@ -14,7 +14,7 @@
 - **PostgreSQL Container** - Self-managed in Azure Container Instances
 - **Azure Key Vault** - For secrets management
 - **Azure Application Insights** - For monitoring
-- **SendGrid** - For email services
+- **Resend** - For email services (free tier: 100 emails/day)
 
 ## Step 1: Set Up Azure Resources
 
@@ -76,11 +76,11 @@ az keyvault secret set \
   --name jwt-secret \
   --value "your-jwt-secret"
 
-# SendGrid API Key
+# Resend API Key
 az keyvault secret set \
   --vault-name finvibe-kv \
-  --name sendgrid-api-key \
-  --value "your-sendgrid-key"
+  --name resend-api-key \
+  --value "re_your_api_key_here"
 ```
 
 ## Step 2: Deploy PostgreSQL Container

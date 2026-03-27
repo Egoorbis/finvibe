@@ -117,7 +117,7 @@ This document summarizes the security enhancements, email functionality, and Dev
 - `backend/src/services/emailService.js`
 
 **Features:**
-- SMTP configuration with SendGrid/Gmail support
+- Resend API for email delivery
 - Password reset emails with branded HTML templates
 - Email verification emails with branded HTML templates
 - Welcome emails after verification
@@ -133,10 +133,10 @@ This document summarizes the security enhancements, email functionality, and Dev
 
 **Environment Variables:**
 ```
-SMTP_HOST=smtp.sendgrid.net
+RESEND_API_KEY=re_your_api_key_here
 SMTP_PORT=587
 SMTP_USER=apikey
-SMTP_PASSWORD=your_sendgrid_api_key
+RESEND_FROM_EMAIL=noreply@yourdomain.com
 SMTP_FROM="FinVibe <noreply@finvibe.com>"
 FRONTEND_URL=http://localhost:5173
 ```
@@ -319,7 +319,7 @@ Azure Container     Azure Container      Azure Container
 - Key Vault: ~$1
 - **Total: ~$40-65/month**
 
-### SendGrid Costs
+### Resend Costs
 - Free tier: 100 emails/day
 - Sufficient for small-medium applications
 - Upgrade available if needed
@@ -428,7 +428,7 @@ Azure Container     Azure Container      Azure Container
 ## Next Steps
 
 1. **Test in Development**: Run backend with email configuration
-2. **Set Up SendGrid**: Create account and get API key
+2. **Set Up Resend**: Create account and get API key
 3. **Configure Azure**: Follow AZURE_DEPLOYMENT.md
 4. **Set Up CI/CD**: Follow GITHUB_ACTIONS_SETUP.md
 5. **Monitor**: Configure Application Insights alerts
