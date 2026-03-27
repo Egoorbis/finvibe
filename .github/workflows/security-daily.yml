@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   security-assessment:
-    uses: Egoorbis/security-agent/.github/workflows/security-agent.yml@main
+    uses: Egoorbis/security_agent/.github/workflows/security-agent.yml@create_agent
     with:
       timeout-minutes: 15
       report-path: "security-reports/daily-assessment.md"
