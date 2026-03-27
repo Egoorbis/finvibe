@@ -38,9 +38,17 @@ A modern, full-stack personal finance tracker to help you manage your expenses, 
 
 ## Deployment Options
 
-### Option 1: Docker Deployment (Recommended for Production)
+### Option 1: Azure Container Apps (Cloud Deployment)
 
-The easiest way to deploy FinVibe is using Docker. See the **[Docker Setup Guide](DOCKER_SETUP.md)** for comprehensive instructions.
+Deploy FinVibe to Azure using automated GitHub Actions workflow. See the **[Azure Deployment Guide](AZURE_DEPLOYMENT.md)** for setup instructions, including:
+- OIDC authentication configuration
+- Azure infrastructure setup
+- GitHub secrets configuration
+- Monitoring and troubleshooting
+
+### Option 2: Docker Deployment (Recommended for Self-Hosting)
+
+The easiest way to deploy FinVibe locally or on your own server is using Docker. See the **[Docker Setup Guide](DOCKER_SETUP.md)** for comprehensive instructions.
 
 **Quick Docker Start:**
 ```bash
@@ -61,7 +69,7 @@ docker-compose exec backend npm run seed
 
 **For detailed instructions, troubleshooting, and production deployment, see [DOCKER_SETUP.md](DOCKER_SETUP.md)**
 
-### Option 2: Local Development Setup
+### Option 3: Local Development Setup
 
 For local development without Docker:
 
@@ -142,6 +150,7 @@ http://localhost:5173
 
 ## Documentation
 
+- **[Azure Deployment Guide](AZURE_DEPLOYMENT.md)** - Complete guide for deploying to Azure Container Apps with GitHub Actions
 - **[Docker Setup Guide](DOCKER_SETUP.md)** - Complete guide for Docker deployment, verification, and troubleshooting
 - **[Environment Variables](ENVIRONMENT.md)** - Comprehensive environment configuration documentation
 
