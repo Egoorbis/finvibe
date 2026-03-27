@@ -57,15 +57,17 @@ export const register = async (req, res) => {
 // Login user
 export const login = async (req, res) => {
   try {
-    const { emailOrUsername, password } = req.body;
+    // Accept both 'email' and 'emailOrUsername' for flexibility
+    const { email, emailOrUsername, password } = req.body;
+    const loginIdentifier = email || emailOrUsername;
 
     // Validation
-    if (!emailOrUsername || !password) {
+    if (!loginIdentifier || !password) {
       return res.status(400).json({ error: 'Email/username and password are required' });
     }
 
     // Authenticate user
-    const user = await User.authenticate(emailOrUsername, password);
+    const user = await User.authenticate(loginIdentifier, password);
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
