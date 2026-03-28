@@ -73,6 +73,17 @@ module "container_registry" {
   tags = var.tags
 }
 
+# Log Analytics Workspace for Container Apps monitoring
+resource "azurerm_log_analytics_workspace" "container_apps" {
+  name                = "${var.container_env_name}-logs"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  sku                 = "PerGB2018"
+  retention_in_days   = 30
+
+  tags = var.tags
+}
+
 # Container Apps Environment using Azure Verified Module
 module "container_apps_environment" {
   source  = "Azure/avm-res-app-managedenvironment/azurerm"
@@ -88,8 +99,9 @@ module "container_apps_environment" {
   }
 
   # Log Analytics workspace configuration for monitoring
-  log_analytics_workspace_name              = "${var.container_env_name}-logs"
-  log_analytics_workspace_resource_group_name = azurerm_resource_group.main.name
+  log_analytics_workspace = {
+    resource_id = azurerm_log_analytics_workspace.container_apps.id
+  }
 
   tags = var.tags
 }
