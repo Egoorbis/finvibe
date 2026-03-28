@@ -1,0 +1,49 @@
+name: Push Images to ACR
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  AZURE_RESOURCE_GROUP: rg-base-container
+  ACR_NAME: metrreg
+
+jobs:
+  push-images:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to Azure Container Registry
+        run: |
+          az acr login --name ${{ env.ACR_NAME }}
+
+      - name: Build and push backend image
+        run: |
+          cd backend
+          docker build -t ${{ env.ACR_NAME }}.azurecr.io/finvibe-backend:${{ github.sha }} \
+                       -t ${{ env.ACR_NAME }}.azurecr.io/finvibe-backend:latest .
+          docker push ${{ env.ACR_NAME }}.azurecr.io/finvibe-backend:${{ github.sha }}
+          docker push ${{ env.ACR_NAME }}.azurecr.io/finvibe-backend:latest
+
+      - name: Build and push frontend image
+        run: |
+          cd frontend
+          docker build -t ${{ env.ACR_NAME }}.azurecr.io/finvibe-frontend:${{ github.sha }} \
+                       -t ${{ env.ACR_NAME }}.azurecr.io/finvibe-frontend:latest .
+          docker push ${{ env.ACR_NAME }}.azurecr.io/finvibe-frontend:${{ github.sha }}
+          docker push ${{ env.ACR_NAME }}.azurecr.io/finvibe-frontend:latest
