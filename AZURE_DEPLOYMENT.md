@@ -1,54 +1,74 @@
 # Azure Deployment Guide
 
-This guide explains how to deploy FinVibe to Azure Container Apps using GitHub Actions.
+This guide explains how to deploy FinVibe to Azure using **Terraform with Azure Verified Modules (AVM)** and GitHub Actions.
+
+## Overview
+
+FinVibe is deployed to Azure using infrastructure-as-code with Terraform. The deployment is fully automated through GitHub Actions and uses Microsoft's Azure Verified Modules for best practices and security.
+
+## Architecture
+
+The deployment creates:
+- **Azure Container Registry (ACR)** - Stores Docker images
+- **Azure Container Apps Environment** - Provides the runtime environment
+- **Backend Container App** - Node.js/Express API
+- **Frontend Container App** - React/Vite application
+
+All infrastructure is defined in Terraform configuration files in the `infra/` directory.
 
 ## Prerequisites
 
 - An Azure account with an active subscription
 - Azure CLI installed locally (for setup)
+- Terraform 1.9+ installed (for local deployment)
 - Access to configure GitHub repository secrets
 
-## Azure Infrastructure Setup
+## Deployment Methods
 
-The deployment uses the following Azure services:
-- **Azure Container Registry (ACR)** - Stores Docker images
-- **Azure Container Apps** - Hosts the frontend and backend containers
-- **Azure Container Apps Environment** - Provides the runtime environment
+You can deploy FinVibe to Azure in two ways:
 
-## Authentication Setup
+### Option 1: Automated Deployment via GitHub Actions (Recommended)
 
-The deployment workflow uses **OpenID Connect (OIDC)** authentication, which is the modern, secure method recommended by Azure and GitHub.
+This method automatically deploys when you push to the `main` branch.
 
-### Step 1: Create an Azure AD Application
+### Option 2: Manual Deployment with Terraform
 
-1. Login to Azure CLI:
-   ```bash
-   az login
-   ```
+Deploy directly from your local machine using Terraform CLI.
 
-2. Create an Azure AD application:
-   ```bash
-   az ad app create --display-name "finvibe-github-actions"
-   ```
+---
 
-   Note the `appId` from the output - this is your `AZURE_CLIENT_ID`.
+## Option 1: Automated Deployment via GitHub Actions
 
-3. Create a service principal for the application:
-   ```bash
-   az ad sp create --id <appId>
-   ```
+### Step 1: Azure Authentication Setup
 
-4. Get your Azure tenant ID:
-   ```bash
-   az account show --query tenantId -o tsv
-   ```
+The deployment uses **OpenID Connect (OIDC)** authentication, which is the modern, secure method recommended by Azure and GitHub.
 
-5. Get your Azure subscription ID:
-   ```bash
-   az account show --query id -o tsv
-   ```
+#### 1.1 Create an Azure AD Application
 
-### Step 2: Configure Federated Credentials
+```bash
+# Login to Azure
+az login
+
+# Create Azure AD application
+az ad app create --display-name "finvibe-github-actions"
+```
+
+Note the `appId` from the output - this is your `AZURE_CLIENT_ID`.
+
+#### 1.2 Create a Service Principal
+
+```bash
+# Create service principal
+az ad sp create --id <appId>
+
+# Get your Azure tenant ID
+az account show --query tenantId -o tsv
+
+# Get your Azure subscription ID
+az account show --query id -o tsv
+```
+
+#### 1.3 Configure Federated Credentials
 
 Configure the Azure AD application to trust GitHub Actions:
 
@@ -63,12 +83,12 @@ az ad app federated-credential create \
   }'
 ```
 
-### Step 3: Assign Azure Permissions
+#### 1.4 Assign Azure Permissions
 
-Grant the service principal permissions to manage your Azure resources:
+Grant the service principal Contributor permissions:
 
 ```bash
-# Get the subscription ID
+# Get subscription ID
 SUBSCRIPTION_ID=$(az account show --query id -o tsv)
 
 # Assign Contributor role
@@ -78,108 +98,181 @@ az role assignment create \
   --scope /subscriptions/$SUBSCRIPTION_ID
 ```
 
-For more restrictive permissions, you can limit the scope to a specific resource group:
+### Step 2: Configure GitHub Secrets
 
-```bash
-az role assignment create \
-  --assignee <appId> \
-  --role Contributor \
-  --scope /subscriptions/$SUBSCRIPTION_ID/resourceGroups/finvibe-rg
-```
-
-### Step 4: Configure GitHub Secrets
-
-Add the following secrets to your GitHub repository:
-
-1. Go to your repository on GitHub
-2. Navigate to **Settings** → **Secrets and variables** → **Actions**
-3. Click **New repository secret** and add each of these:
+Add these secrets to your GitHub repository (Settings → Secrets and variables → Actions):
 
 | Secret Name | Value | Description |
 |-------------|-------|-------------|
-| `AZURE_CLIENT_ID` | `<appId>` | The Application (client) ID from Step 1 |
-| `AZURE_TENANT_ID` | Your tenant ID | The Azure AD tenant ID from Step 1 |
-| `AZURE_SUBSCRIPTION_ID` | Your subscription ID | The Azure subscription ID from Step 1 |
+| `AZURE_CLIENT_ID` | `<appId>` | Application (client) ID from Step 1.1 |
+| `AZURE_TENANT_ID` | Your tenant ID | Azure AD tenant ID from Step 1.2 |
+| `AZURE_SUBSCRIPTION_ID` | Your subscription ID | Azure subscription ID from Step 1.2 |
+| `ACR_NAME` | Your unique ACR name | (Optional) Container registry name |
 
-## Infrastructure Deployment
+### Step 3: Deploy
 
-Before the GitHub Actions workflow can deploy the application, you need to create the Azure infrastructure:
-
-### Create Resource Group
-
-```bash
-az group create \
-  --name finvibe-rg \
-  --location eastus
-```
-
-### Create Container Registry
+Push to the `main` branch or manually trigger the workflow:
 
 ```bash
-az acr create \
-  --resource-group finvibe-rg \
-  --name finvibereg \
-  --sku Basic \
-  --admin-enabled true
+git push origin main
 ```
 
-### Create Container Apps Environment
+Or trigger manually from GitHub:
+1. Go to Actions tab
+2. Select "Deploy to Azure with Terraform"
+3. Click "Run workflow"
+
+The GitHub Actions workflow will:
+1. ✅ Plan infrastructure changes with Terraform
+2. ✅ Apply infrastructure changes if needed
+3. ✅ Build and push Docker images to ACR
+4. ✅ Deploy containers to Azure Container Apps
+5. ✅ Run database migrations
+6. ✅ Display deployment URLs
+
+---
+
+## Option 2: Manual Deployment with Terraform
+
+### Step 1: Install Prerequisites
+
+**Terraform:**
+```bash
+# Windows
+winget install Hashicorp.Terraform
+
+# macOS
+brew install terraform
+
+# Linux
+curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+sudo apt-get update && sudo apt-get install terraform
+```
+
+**Azure CLI:**
+```bash
+# Windows
+winget install Microsoft.AzureCLI
+
+# macOS
+brew install azure-cli
+
+# Linux
+curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+```
+
+### Step 2: Configure Terraform Variables
 
 ```bash
-az containerapp env create \
-  --name finvibe-env \
-  --resource-group finvibe-rg \
-  --location eastus
+cd infra
+cp terraform.tfvars.example terraform.tfvars
 ```
 
-### Create Container Apps
+Edit `terraform.tfvars` and set:
+- `subscription_id` - Get with: `az account show --query id -o tsv`
+- `acr_name` - Must be globally unique, alphanumeric only (e.g., "finvibereg123")
+- Other variables as needed
 
-#### Backend App:
+### Step 3: Login to Azure
+
 ```bash
-az containerapp create \
-  --name finvibe-backend \
-  --resource-group finvibe-rg \
-  --environment finvibe-env \
-  --image mcr.microsoft.com/azuredocs/containerapps-helloworld:latest \
-  --target-port 3000 \
-  --ingress external \
-  --registry-server finvibereg.azurecr.io \
-  --cpu 0.5 \
-  --memory 1.0Gi \
-  --min-replicas 1 \
-  --max-replicas 3 \
-  --env-vars \
-    NODE_ENV=production \
-    PORT=3000
+az login
+az account set --subscription <your-subscription-id>
 ```
 
-#### Frontend App:
+### Step 4: Deploy Infrastructure
+
 ```bash
-az containerapp create \
-  --name finvibe-frontend \
-  --resource-group finvibe-rg \
-  --environment finvibe-env \
-  --image mcr.microsoft.com/azuredocs/containerapps-helloworld:latest \
-  --target-port 80 \
-  --ingress external \
-  --registry-server finvibereg.azurecr.io \
-  --cpu 0.5 \
-  --memory 1.0Gi \
-  --min-replicas 1 \
-  --max-replicas 3
+# Initialize Terraform
+terraform init
+
+# Validate configuration
+terraform validate
+
+# Preview changes
+terraform plan
+
+# Deploy infrastructure
+terraform apply
 ```
 
-## Deployment Workflow
+Type `yes` when prompted to confirm.
 
-Once the infrastructure is set up, the GitHub Actions workflow (`.github/workflows/azure-deploy.yml`) will automatically:
+### Step 5: Deploy Application Containers
 
-1. Trigger on pushes to the `main` branch or manual dispatch
-2. Authenticate with Azure using OIDC
-3. Build Docker images for frontend and backend
-4. Push images to Azure Container Registry
-5. Update Container Apps with new images
-6. Run database migrations
-7. Display deployment URLs
+After infrastructure is created:
+
+```bash
+# Get outputs
+ACR_LOGIN_SERVER=$(terraform output -raw container_registry_login_server)
+RESOURCE_GROUP=$(terraform output -raw resource_group_name)
+BACKEND_APP=$(terraform output -raw backend_app_name)
+FRONTEND_APP=$(terraform output -raw frontend_app_name)
+
+# Login to ACR
+az acr login --name $ACR_LOGIN_SERVER
+
+# Build and push backend
+cd ../backend
+docker build -t $ACR_LOGIN_SERVER/finvibe-backend:latest .
+docker push $ACR_LOGIN_SERVER/finvibe-backend:latest
+
+# Build and push frontend
+cd ../frontend
+docker build -t $ACR_LOGIN_SERVER/finvibe-frontend:latest .
+docker push $ACR_LOGIN_SERVER/finvibe-frontend:latest
+
+# Update Container Apps
+az containerapp update \
+  --name $BACKEND_APP \
+  --resource-group $RESOURCE_GROUP \
+  --image $ACR_LOGIN_SERVER/finvibe-backend:latest
+
+az containerapp update \
+  --name $FRONTEND_APP \
+  --resource-group $RESOURCE_GROUP \
+  --image $ACR_LOGIN_SERVER/finvibe-frontend:latest
+
+# Run migrations
+az containerapp exec \
+  --name $BACKEND_APP \
+  --resource-group $RESOURCE_GROUP \
+  --command "/bin/sh" \
+  --args "-c 'npm run db:migrate'"
+```
+
+### Step 6: Get Application URLs
+
+```bash
+# View all outputs including URLs
+terraform output
+
+# Or get specific URLs
+echo "Backend API: $(terraform output -raw backend_app_api_url)"
+echo "Frontend: $(terraform output -raw frontend_app_url)"
+```
+
+---
+
+## Infrastructure as Code
+
+All infrastructure is defined using Terraform with Azure Verified Modules (AVM):
+
+### Terraform Files
+
+- `infra/main.tf` - Main infrastructure configuration
+- `infra/variables.tf` - Variable definitions
+- `infra/outputs.tf` - Output definitions
+- `infra/terraform.tfvars` - Your configuration values (gitignored)
+
+### Azure Verified Modules Used
+
+1. **Container Registry** - [avm-res-containerregistry-registry](https://registry.terraform.io/modules/Azure/avm-res-containerregistry-registry/azurerm/latest)
+2. **Container Apps Environment** - [avm-res-app-managedenvironment](https://registry.terraform.io/modules/Azure/avm-res-app-managedenvironment/azurerm/latest)
+3. **Container Apps** - [avm-res-app-containerapp](https://registry.terraform.io/modules/Azure/avm-res-app-containerapp/azurerm/latest)
+
+These modules follow Microsoft's best practices and are production-ready.
 
 ## Monitoring and Logs
 
@@ -199,78 +292,144 @@ az containerapp logs show \
   --follow
 ```
 
-### View Application URLs
+### View Terraform State
 
 ```bash
-# Get backend URL
-az containerapp show \
-  --name finvibe-backend \
-  --resource-group finvibe-rg \
-  --query properties.configuration.ingress.fqdn \
-  --output tsv
-
-# Get frontend URL
-az containerapp show \
-  --name finvibe-frontend \
-  --resource-group finvibe-rg \
-  --query properties.configuration.ingress.fqdn \
-  --output tsv
+cd infra
+terraform show
+terraform state list
 ```
+
+### Azure Portal
+
+View all resources in the [Azure Portal](https://portal.azure.com):
+- Search for "finvibe-rg" resource group
+- Or use the portal link from `terraform output deployment_summary`
+
+## Updating Infrastructure
+
+To modify infrastructure:
+
+1. Edit Terraform files in `infra/` directory
+2. Run `terraform plan` to preview changes
+3. Run `terraform apply` to apply changes
+4. Or push to `main` branch for automatic deployment
+
+## Security Features
+
+✅ **Managed Identities** - No credentials stored, apps use Azure Managed Identity
+✅ **RBAC** - Role-based access control for all resources
+✅ **OIDC Authentication** - GitHub Actions uses OIDC, no secrets stored
+✅ **Network Security** - Configurable network access controls
+✅ **Encryption** - Data encrypted at rest and in transit
+✅ **Purge Protection** - Enabled for Key Vault resources
+✅ **Azure Verified Modules** - Following Microsoft best practices
 
 ## Troubleshooting
 
-### Authentication Errors
+### GitHub Actions Fails
 
-If you see errors like "Login failed with Error: Using auth-type: SERVICE_PRINCIPAL":
+1. **Authentication errors**: Verify all three secrets are set correctly
+2. **Federated credential issues**: Ensure the subject matches your repo and branch
+3. **Permission errors**: Verify service principal has Contributor role
 
-1. Verify all three secrets are set in GitHub: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`
-2. Ensure the federated credential subject matches your repository and branch
-3. Verify the service principal has Contributor role on the subscription or resource group
+### Terraform Errors
+
+1. **ACR name already exists**: Must be globally unique, try different name
+2. **State lock**: Another operation in progress, wait or use `terraform force-unlock`
+3. **Authentication**: Run `az login` and verify subscription
 
 ### Container Registry Authentication
 
-If container registry login fails:
 ```bash
-# Ensure admin access is enabled
-az acr update --name finvibereg --admin-enabled true
+# Enable admin access (if needed)
+az acr update --name <acr-name> --admin-enabled true
 
-# Grant AcrPull role to the service principal
-az role assignment create \
-  --assignee <appId> \
-  --role AcrPull \
-  --scope /subscriptions/$SUBSCRIPTION_ID/resourceGroups/finvibe-rg/providers/Microsoft.ContainerRegistry/registries/finvibereg
+# Login to ACR
+az acr login --name <acr-name>
 ```
 
 ### Container App Issues
 
-Check container app status:
 ```bash
+# Check app status
 az containerapp show \
   --name finvibe-backend \
   --resource-group finvibe-rg \
   --query properties.runningStatus
+
+# View recent revisions
+az containerapp revision list \
+  --name finvibe-backend \
+  --resource-group finvibe-rg
 ```
 
 ## Cost Management
 
-To keep costs low:
-- Container Apps scale to zero when not in use
+To minimize Azure costs:
+- Container Apps scale to zero when idle (set `min_replicas = 0`)
 - Use Basic SKU for Container Registry
-- Monitor usage in Azure Portal under Cost Management
+- Monitor costs in Azure Portal → Cost Management
+- Resources are tagged for cost tracking
+
+Estimated monthly cost (Basic setup):
+- Container Registry (Basic): ~$5/month
+- Container Apps: Pay-per-use, can be $0 when idle
+- Log Analytics: Based on ingestion, typically $5-10/month
 
 ## Cleanup
 
-To remove all Azure resources:
+### Remove All Resources
+
+**Using Terraform:**
+```bash
+cd infra
+terraform destroy
+```
+
+**Using Azure CLI:**
 ```bash
 az group delete --name finvibe-rg --yes --no-wait
 ```
 
+**Warning**: This permanently deletes all resources and data. Use with caution.
+
+## CI/CD Workflow
+
+The GitHub Actions workflow (`.github/workflows/azure-deploy-terraform.yml`) includes:
+
+1. **Terraform Plan** - Plans infrastructure changes
+2. **Terraform Apply** - Applies approved changes
+3. **Build & Deploy** - Builds images and updates Container Apps
+
+The workflow only applies infrastructure changes if Terraform detects modifications.
+
+## Best Practices
+
+✅ **Use Terraform** - Infrastructure as Code for repeatability
+✅ **Version Control** - All infrastructure in Git
+✅ **Azure Verified Modules** - Microsoft-verified, production-ready
+✅ **Managed Identity** - No credential management needed
+✅ **Auto-scaling** - Apps scale based on demand
+✅ **Monitoring** - Integrated with Azure Monitor and Log Analytics
+✅ **CI/CD** - Automated deployments via GitHub Actions
+
 ## Additional Resources
 
-- [Azure Container Apps Documentation](https://learn.microsoft.com/en-us/azure/container-apps/)
-- [GitHub Actions OIDC with Azure](https://learn.microsoft.com/en-us/azure/developer/github/connect-from-azure)
-- [Azure Container Registry](https://learn.microsoft.com/en-us/azure/container-registry/)
+- [Terraform Azure Provider](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs)
+- [Azure Verified Modules](https://azure.github.io/Azure-Verified-Modules/)
+- [Azure Container Apps](https://learn.microsoft.com/en-us/azure/container-apps/)
+- [GitHub OIDC with Azure](https://learn.microsoft.com/en-us/azure/developer/github/connect-from-azure)
+- [Terraform Best Practices](https://www.terraform.io/docs/cloud/guides/recommended-practices/)
+
+## Support
+
+For deployment issues:
+1. Check GitHub Actions logs
+2. Review Terraform plan output
+3. Check Azure Portal for resource status
+4. View Container Apps logs with Azure CLI
 
 ---
 
-**Note**: This setup uses OIDC authentication which is more secure than storing credentials. No passwords or keys are stored in GitHub secrets.
+**Note**: This deployment uses Terraform with Azure Verified Modules for production-grade infrastructure following Microsoft best practices.

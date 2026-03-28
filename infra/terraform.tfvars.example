@@ -1,0 +1,37 @@
+# Example terraform.tfvars file
+# Copy this file to terraform.tfvars and update with your values
+# Note: terraform.tfvars is gitignored for security
+
+# REQUIRED: Your Azure subscription ID
+# Get this with: az account show --query id -o tsv
+subscription_id = "YOUR_SUBSCRIPTION_ID_HERE"
+
+# Azure Container Registry name (must be globally unique, alphanumeric only)
+# Example: finvibereg123 or finvibe$(uuidgen | tr -d '-' | head -c 8)
+acr_name = "finvibereg"
+
+# Resource group configuration
+resource_group_name = "finvibe-rg"
+location            = "swedencentral"
+
+# Container Apps configuration
+container_env_name = "finvibe-env"
+backend_app_name   = "finvibe-backend"
+frontend_app_name  = "finvibe-frontend"
+
+# Scaling configuration
+backend_min_replicas  = 1
+backend_max_replicas  = 3
+frontend_min_replicas = 1
+frontend_max_replicas = 3
+
+# Azure Container Registry SKU
+# Options: Basic, Standard, Premium
+acr_sku = "Basic"
+
+# Tags for all resources
+tags = {
+  Environment = "production"
+  Project     = "finvibe"
+  ManagedBy   = "terraform"
+}
