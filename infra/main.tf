@@ -28,7 +28,7 @@ module "container_apps_environment" {
   location            = azurerm_resource_group.main.location
 
   # Disable zone redundancy since no infrastructure subnet provided
-  zone_redundant = false
+  zone_redundancy_enabled = false
 
   # Enable system-assigned managed identity
   managed_identities = {
