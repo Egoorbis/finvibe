@@ -9,7 +9,7 @@ on:
 env:
   AZURE_RESOURCE_GROUP: finvibe-rg
   AZURE_LOCATION: swedencentral
-  ACR_NAME: metrreg
+  ACR_NAME: metrreg-h2btefb0b6ede5hb.azurecr.io
   BACKEND_APP_NAME: finvibe-backend
   FRONTEND_APP_NAME: finvibe-frontend
   CONTAINER_ENV_NAME: finvibe-env
