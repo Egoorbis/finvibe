@@ -1,33 +1,3 @@
-terraform {
-  required_version = ">= 1.10"
-
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 4.2"
-    }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.6"
-    }
-  }
-}
-
-provider "azurerm" {
-  features {
-    resource_group {
-      prevent_deletion_if_contains_resources = false
-    }
-    key_vault {
-      purge_soft_delete_on_destroy = false
-    }
-  }
-  subscription_id = var.subscription_id
-}
-
-# Data source for current client configuration
-data "azurerm_client_config" "current" {}
-
 # Resource Group
 resource "azurerm_resource_group" "main" {
   name     = var.resource_group_name
@@ -36,42 +6,6 @@ resource "azurerm_resource_group" "main" {
   tags = var.tags
 }
 
-# Azure Container Registry using Azure Verified Module
-module "container_registry" {
-  source  = "Azure/avm-res-containerregistry-registry/azurerm"
-  version = "0.5.1"
-
-  name                = var.acr_name
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
-
-  # SKU for the registry
-  sku = var.acr_sku
-
-  # Enable admin user for easier authentication (can be disabled for production with managed identity)
-  admin_enabled = true
-
-  # Public network access - can be disabled for enhanced security
-  public_network_access_enabled = true
-
-  # Enable anonymous pull access - disabled for security
-  anonymous_pull_enabled = false
-
-  # Managed identity for the registry
-  managed_identities = {
-    system_assigned = true
-  }
-
-  # Role assignments for managed identity
-  role_assignments = {
-    acr_pull = {
-      principal_id         = module.container_apps_environment.managed_identities["system_assigned"].principal_id
-      role_definition_name = "AcrPull"
-    }
-  }
-
-  tags = var.tags
-}
 
 # Log Analytics Workspace for Container Apps monitoring
 resource "azurerm_log_analytics_workspace" "container_apps" {
@@ -113,7 +47,7 @@ module "backend_container_app" {
 
   name                         = var.backend_app_name
   resource_group_name          = azurerm_resource_group.main.name
-  container_app_environment_id = module.container_apps_environment.resource_id
+  container_app_environment_resource_id = module.container_apps_environment.resource_id
 
   # Revision mode
   revision_mode = "Single"
@@ -125,15 +59,14 @@ module "backend_container_app" {
 
   # Registry configuration
   registries = [{
-    server   = module.container_registry.resource.login_server
-    identity = module.backend_container_app.managed_identities["system_assigned"].id
+    server = data.azurerm_container_registry.existing.login_server
   }]
 
   # Container configuration
   template = {
     containers = [{
       name   = "backend"
-      image  = "${module.container_registry.resource.login_server}/finvibe-backend:latest"
+      image  = "${data.azurerm_container_registry.existing.login_server}/finvibe-backend:latest"
       cpu    = 0.5
       memory = "1Gi"
 
@@ -164,18 +97,16 @@ module "backend_container_app" {
     }]
   }
 
-  # Role assignment for ACR pull
-  role_assignments = {
-    acr_pull = {
-      principal_id         = module.backend_container_app.managed_identities["system_assigned"].principal_id
-      role_definition_name = "AcrPull"
-      scope_resource_id    = module.container_registry.resource.id
-    }
-  }
-
   tags = var.tags
 
   depends_on = [module.container_apps_environment]
+}
+
+# Role assignment for backend to pull from ACR
+resource "azurerm_role_assignment" "backend_acr_pull" {
+  scope                = data.azurerm_container_registry.existing.id
+  role_definition_name = "AcrPull"
+  principal_id         = data.azurerm_container_app.backend.identity[0].principal_id
 }
 
 # Frontend Container App using Azure Verified Module
@@ -185,7 +116,7 @@ module "frontend_container_app" {
 
   name                         = var.frontend_app_name
   resource_group_name          = azurerm_resource_group.main.name
-  container_app_environment_id = module.container_apps_environment.resource_id
+  container_app_environment_resource_id = module.container_apps_environment.resource_id
 
   # Revision mode
   revision_mode = "Single"
@@ -197,22 +128,21 @@ module "frontend_container_app" {
 
   # Registry configuration
   registries = [{
-    server   = module.container_registry.resource.login_server
-    identity = module.frontend_container_app.managed_identities["system_assigned"].id
+    server = data.azurerm_container_registry.existing.login_server
   }]
 
   # Container configuration
   template = {
     containers = [{
       name   = "frontend"
-      image  = "${module.container_registry.resource.login_server}/finvibe-frontend:latest"
+      image  = "${data.azurerm_container_registry.existing.login_server}/finvibe-frontend:latest"
       cpu    = 0.5
       memory = "1Gi"
 
       env = [
         {
           name  = "VITE_API_URL"
-          value = "https://${module.backend_container_app.fqdn}/api"
+          value = "https://${module.backend_container_app.resource.ingress[0].fqdn}/api"
         }
       ]
     }]
@@ -232,19 +162,17 @@ module "frontend_container_app" {
     }]
   }
 
-  # Role assignment for ACR pull
-  role_assignments = {
-    acr_pull = {
-      principal_id         = module.frontend_container_app.managed_identities["system_assigned"].principal_id
-      role_definition_name = "AcrPull"
-      scope_resource_id    = module.container_registry.resource.id
-    }
-  }
-
   tags = var.tags
 
   depends_on = [
     module.container_apps_environment,
     module.backend_container_app
   ]
+}
+
+# Role assignment for frontend to pull from ACR
+resource "azurerm_role_assignment" "frontend_acr_pull" {
+  scope                = data.azurerm_container_registry.existing.id
+  role_definition_name = "AcrPull"
+  principal_id         = data.azurerm_container_app.frontend.identity[0].principal_id
 }
