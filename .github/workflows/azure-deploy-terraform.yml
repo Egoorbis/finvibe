@@ -12,10 +12,51 @@ on:
 env:
   TERRAFORM_VERSION: "1.11"
   WORKING_DIR: ./infra
+  ACR_NAME: metrreg
+  ACR_LOGIN_SERVER: metrreg-g3f3hxgzfbfkfxhk.azurecr.io
 
 jobs:
+  build-and-push-images:
+    name: Build and Push Container Images
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login using OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to Azure Container Registry
+        run: |
+          az acr login --name ${{ env.ACR_NAME }}
+
+      - name: Build and push backend image
+        run: |
+          cd backend
+          docker build -t ${{ env.ACR_LOGIN_SERVER }}/finvibe-backend:${{ github.sha }} \
+                       -t ${{ env.ACR_LOGIN_SERVER }}/finvibe-backend:latest .
+          docker push ${{ env.ACR_LOGIN_SERVER }}/finvibe-backend:${{ github.sha }}
+          docker push ${{ env.ACR_LOGIN_SERVER }}/finvibe-backend:latest
+
+      - name: Build and push frontend image
+        run: |
+          cd frontend
+          docker build -t ${{ env.ACR_LOGIN_SERVER }}/finvibe-frontend:${{ github.sha }} \
+                       -t ${{ env.ACR_LOGIN_SERVER }}/finvibe-frontend:latest .
+          docker push ${{ env.ACR_LOGIN_SERVER }}/finvibe-frontend:${{ github.sha }}
+          docker push ${{ env.ACR_LOGIN_SERVER }}/finvibe-frontend:latest
+
   terraform-plan:
     name: Terraform Plan
+    needs: [build-and-push-images]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -52,7 +93,6 @@ jobs:
         working-directory: ${{ env.WORKING_DIR }}
         env:
           TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          TF_VAR_acr_name: ${{ secrets.ACR_NAME || 'finvibereg' }}
         run: |
           terraform plan -detailed-exitcode -no-color -out=tfplan
           exitcode=$?
@@ -73,12 +113,12 @@ jobs:
   terraform-apply:
     name: Terraform Apply
     needs: [terraform-plan]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
     outputs:
-      acr_login_server: ${{ steps.outputs.outputs.acr_login_server }}
       backend_app_name: ${{ steps.outputs.outputs.backend_app_name }}
       frontend_app_name: ${{ steps.outputs.outputs.frontend_app_name }}
       resource_group_name: ${{ steps.outputs.outputs.resource_group_name }}
@@ -114,21 +154,20 @@ jobs:
         working-directory: ${{ env.WORKING_DIR }}
         env:
           TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          TF_VAR_acr_name: ${{ secrets.ACR_NAME || 'finvibereg' }}
         run: terraform apply -auto-approve tfplan
 
       - name: Get Terraform Outputs
         id: outputs
         working-directory: ${{ env.WORKING_DIR }}
         run: |
-          echo "acr_login_server=$(terraform output -raw container_registry_login_server)" >> $GITHUB_OUTPUT
           echo "backend_app_name=$(terraform output -raw backend_app_name)" >> $GITHUB_OUTPUT
           echo "frontend_app_name=$(terraform output -raw frontend_app_name)" >> $GITHUB_OUTPUT
           echo "resource_group_name=$(terraform output -raw resource_group_name)" >> $GITHUB_OUTPUT
 
-  build-and-deploy:
-    name: Build and Deploy Containers
-    needs: [terraform-plan, terraform-apply]
+  update-containers:
+    name: Update Containers and Config
+    needs: [terraform-apply]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -145,32 +184,12 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Login to Azure Container Registry
-        run: |
-          az acr login --name ${{ needs.terraform-apply.outputs.acr_login_server }}
-
-      - name: Build and push backend image
-        run: |
-          cd backend
-          docker build -t ${{ needs.terraform-apply.outputs.acr_login_server }}/finvibe-backend:${{ github.sha }} \
-                       -t ${{ needs.terraform-apply.outputs.acr_login_server }}/finvibe-backend:latest .
-          docker push ${{ needs.terraform-apply.outputs.acr_login_server }}/finvibe-backend:${{ github.sha }}
-          docker push ${{ needs.terraform-apply.outputs.acr_login_server }}/finvibe-backend:latest
-
-      - name: Build and push frontend image
-        run: |
-          cd frontend
-          docker build -t ${{ needs.terraform-apply.outputs.acr_login_server }}/finvibe-frontend:${{ github.sha }} \
-                       -t ${{ needs.terraform-apply.outputs.acr_login_server }}/finvibe-frontend:latest .
-          docker push ${{ needs.terraform-apply.outputs.acr_login_server }}/finvibe-frontend:${{ github.sha }}
-          docker push ${{ needs.terraform-apply.outputs.acr_login_server }}/finvibe-frontend:latest
-
       - name: Update backend Container App
         run: |
           az containerapp update \
             --name ${{ needs.terraform-apply.outputs.backend_app_name }} \
             --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
-            --image ${{ needs.terraform-apply.outputs.acr_login_server }}/finvibe-backend:${{ github.sha }}
+            --image ${{ env.ACR_LOGIN_SERVER }}/finvibe-backend:${{ github.sha }}
 
       - name: Get backend URL
         id: backend-url
@@ -182,12 +201,12 @@ jobs:
             --output tsv)
           echo "url=https://$BACKEND_URL" >> $GITHUB_OUTPUT
 
-      - name: Update frontend Container App
+      - name: Update frontend Container App with backend URL
         run: |
           az containerapp update \
             --name ${{ needs.terraform-apply.outputs.frontend_app_name }} \
             --resource-group ${{ needs.terraform-apply.outputs.resource_group_name }} \
-            --image ${{ needs.terraform-apply.outputs.acr_login_server }}/finvibe-frontend:${{ github.sha }} \
+            --image ${{ env.ACR_LOGIN_SERVER }}/finvibe-frontend:${{ github.sha }} \
             --set-env-vars VITE_API_URL=${{ steps.backend-url.outputs.url }}/api
 
       - name: Run database migrations
