@@ -9,6 +9,7 @@ on:
 env:
   AZURE_RESOURCE_GROUP: rg-base-container
   ACR_NAME: metrreg
+  ACR_LOGIN_SERVER: metrreg-g3f3hxgzfbfkfxhk.azurecr.io
 
 jobs:
   push-images:
@@ -35,15 +36,15 @@ jobs:
       - name: Build and push backend image
         run: |
           cd backend
-          docker build -t ${{ env.ACR_NAME }}.azurecr.io/finvibe-backend:${{ github.sha }} \
-                       -t ${{ env.ACR_NAME }}.azurecr.io/finvibe-backend:latest .
-          docker push ${{ env.ACR_NAME }}.azurecr.io/finvibe-backend:${{ github.sha }}
-          docker push ${{ env.ACR_NAME }}.azurecr.io/finvibe-backend:latest
+          docker build -t ${{ env.ACR_LOGIN_SERVER }}/finvibe-backend:${{ github.sha }} \
+                       -t ${{ env.ACR_LOGIN_SERVER }}/finvibe-backend:latest .
+          docker push ${{ env.ACR_LOGIN_SERVER }}/finvibe-backend:${{ github.sha }}
+          docker push ${{ env.ACR_LOGIN_SERVER }}/finvibe-backend:latest
 
       - name: Build and push frontend image
         run: |
           cd frontend
-          docker build -t ${{ env.ACR_NAME }}.azurecr.io/finvibe-frontend:${{ github.sha }} \
-                       -t ${{ env.ACR_NAME }}.azurecr.io/finvibe-frontend:latest .
-          docker push ${{ env.ACR_NAME }}.azurecr.io/finvibe-frontend:${{ github.sha }}
-          docker push ${{ env.ACR_NAME }}.azurecr.io/finvibe-frontend:latest
+          docker build -t ${{ env.ACR_LOGIN_SERVER }}/finvibe-frontend:${{ github.sha }} \
+                       -t ${{ env.ACR_LOGIN_SERVER }}/finvibe-frontend:latest .
+          docker push ${{ env.ACR_LOGIN_SERVER }}/finvibe-frontend:${{ github.sha }}
+          docker push ${{ env.ACR_LOGIN_SERVER }}/finvibe-frontend:latest
