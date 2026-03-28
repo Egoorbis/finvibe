@@ -60,11 +60,6 @@ module "backend_container_app" {
     system_assigned = true
   }
 
-  # Registry configuration
-  registries = [{
-    server = data.azurerm_container_registry.existing.login_server
-  }]
-
   # Container configuration
   template = {
     containers = [{
@@ -108,7 +103,7 @@ module "backend_container_app" {
 # Role assignment for backend to pull from ACR
 resource "azurerm_role_assignment" "backend_acr_pull" {
   scope                = data.azurerm_container_registry.existing.id
-  role_definition_name = "AcrPull"
+  role_definition_name = "Container Registry Repository Contributor"
   principal_id         = data.azurerm_container_app.backend.identity[0].principal_id
 }
 
@@ -128,11 +123,6 @@ module "frontend_container_app" {
   managed_identities = {
     system_assigned = true
   }
-
-  # Registry configuration
-  registries = [{
-    server = data.azurerm_container_registry.existing.login_server
-  }]
 
   # Container configuration
   template = {
@@ -176,6 +166,6 @@ module "frontend_container_app" {
 # Role assignment for frontend to pull from ACR
 resource "azurerm_role_assignment" "frontend_acr_pull" {
   scope                = data.azurerm_container_registry.existing.id
-  role_definition_name = "AcrPull"
+  role_definition_name = "Container Registry Repository Contributor"
   principal_id         = data.azurerm_container_app.frontend.identity[0].principal_id
 }
