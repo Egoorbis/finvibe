@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 env:
-  TERRAFORM_VERSION: "1.10.3"
+  TERRAFORM_VERSION: "1.11"
   WORKING_DIR: ./infra
 
 jobs:
