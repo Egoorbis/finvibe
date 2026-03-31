@@ -18,6 +18,19 @@ resource "azurerm_log_analytics_workspace" "container_apps" {
   tags = var.tags
 }
 
+module "avm-res-managedidentity-userassignedidentity" {
+  source  = "Azure/avm-res-managedidentity-userassignedidentity/azurerm"
+  version = "0.5.0"
+  name                = "uami-finvibe"
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
+  role_assignments = {
+    repository_contributor = {
+      role_definition_name = "Container Registry Repository Contributor"
+      scope                = data.azurerm_container_registry.existing.id
+    }
+  }
+}
 # Container Apps Environment using Azure Verified Module
 module "container_apps_environment" {
   source  = "Azure/avm-res-app-managedenvironment/azurerm"
@@ -46,7 +59,7 @@ module "container_apps_environment" {
 # Backend Container App using Azure Verified Module
 module "backend_container_app" {
   source  = "Azure/avm-res-app-containerapp/azurerm"
-  version = "0.6.0"
+  version = "0.8.0"
 
   name                         = var.backend_app_name
   resource_group_name          = azurerm_resource_group.main.name
@@ -57,7 +70,7 @@ module "backend_container_app" {
 
   # Enable system-assigned managed identity
   managed_identities = {
-    system_assigned = true
+    user_assigned_resource_ids = module.avm-res-managedidentity-userassignedidentity.resource_ids
   }
 
   # Container configuration
@@ -97,20 +110,16 @@ module "backend_container_app" {
 
   tags = var.tags
 
-  depends_on = [module.container_apps_environment]
+  depends_on = [module.container_apps_environment,
+  module.avm-res-managedidentity-userassignedidentity]
+
 }
 
-# Role assignment for backend to pull from ACR
-resource "azurerm_role_assignment" "backend_acr_pull" {
-  scope                = data.azurerm_container_registry.existing.id
-  role_definition_name = "Container Registry Repository Contributor"
-  principal_id         = data.azurerm_container_app.backend.identity[0].principal_id
-}
 
 # Frontend Container App using Azure Verified Module
 module "frontend_container_app" {
   source  = "Azure/avm-res-app-containerapp/azurerm"
-  version = "0.6.0"
+  version = "0.8.0"
 
   name                         = var.frontend_app_name
   resource_group_name          = azurerm_resource_group.main.name
@@ -121,7 +130,7 @@ module "frontend_container_app" {
 
   # Enable system-assigned managed identity
   managed_identities = {
-    system_assigned = true
+    user_assigned_resource_ids = module.avm-res-managedidentity-userassignedidentity.resource_ids
   }
 
   # Container configuration
@@ -159,13 +168,9 @@ module "frontend_container_app" {
 
   depends_on = [
     module.container_apps_environment,
-    module.backend_container_app
+    module.backend_container_app,
+    module.avm-res-managedidentity-userassignedidentity
   ]
 }
 
-# Role assignment for frontend to pull from ACR
-resource "azurerm_role_assignment" "frontend_acr_pull" {
-  scope                = data.azurerm_container_registry.existing.id
-  role_definition_name = "Container Registry Repository Contributor"
-  principal_id         = data.azurerm_container_app.frontend.identity[0].principal_id
-}
+
