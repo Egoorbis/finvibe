@@ -26,7 +26,7 @@ module "avm-res-managedidentity-userassignedidentity" {
   location            = azurerm_resource_group.main.location
   role_assignments = {
     repository_contributor = {
-      role_definition_name = "Container Registry Repository Contributor"
+      role_definition_id_or_name  = "Container Registry Repository Contributor"
       scope                = data.azurerm_container_registry.existing.id
     }
   }
