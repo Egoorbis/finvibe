@@ -31,6 +31,7 @@ module "avm-res-managedidentity-userassignedidentity" {
     }
   }
 }
+
 # Container Apps Environment using Azure Verified Module
 module "container_apps_environment" {
   source  = "Azure/avm-res-app-managedenvironment/azurerm"
@@ -70,7 +71,7 @@ module "backend_container_app" {
 
   # Enable system-assigned managed identity
   managed_identities = {
-    user_assigned_resource_ids = module.avm-res-managedidentity-userassignedidentity.resource_ids
+    user_assigned_resource_ids = [module.avm-res-managedidentity-userassignedidentity.resource_id]
   }
 
   # Container configuration
@@ -130,7 +131,7 @@ module "frontend_container_app" {
 
   # Enable system-assigned managed identity
   managed_identities = {
-    user_assigned_resource_ids = module.avm-res-managedidentity-userassignedidentity.resource_ids
+    user_assigned_resource_ids = [module.avm-res-managedidentity-userassignedidentity.resource_id]
   }
 
   # Container configuration
