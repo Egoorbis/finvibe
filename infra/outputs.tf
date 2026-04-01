@@ -48,8 +48,8 @@ output "deployment_summary" {
     location          = azurerm_resource_group.main.location
     acr_login_server  = data.azurerm_container_registry.existing.login_server
     backend_url       = "https://${module.backend_container_app.resource.ingress[0].fqdn}"
-    backend_api_url   = "https://${module.backend_container_app.resource.ingress[0].fqdn}/api"
-    frontend_url      = "https://${module.frontend_container_app.resource.ingress[0].fqdn}"
+    backend_api_url   = "https://${module.backend_container_app.resource.fqdn_url[0]}/api"
+    frontend_url      = "https://${module.frontend_container_app.resource.fqdn_url[0]}"
     azure_portal_url  = "https://portal.azure.com/#@/resource${azurerm_resource_group.main.id}"
   }
 }
