@@ -29,6 +29,11 @@ frontend_max_replicas = 3
 # Options: Basic, Standard, Premium
 acr_sku = "Basic"
 
+# PostgreSQL configuration
+postgres_db_name   = "finvibe"
+postgres_user      = "finvibe_user"
+postgres_password  = "CHANGE_ME_SECURE_PASSWORD"
+
 # Tags for all resources
 tags = {
   Environment = "production"

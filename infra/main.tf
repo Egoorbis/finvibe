@@ -57,6 +57,76 @@ module "container_apps_environment" {
   tags = var.tags
 }
 
+# PostgreSQL Container App using Azure Verified Module
+module "postgres_container_app" {
+  source  = "Azure/avm-res-app-containerapp/azurerm"
+  version = "0.8.0"
+
+  name                         = "finvibe-postgres"
+  resource_group_name          = azurerm_resource_group.main.name
+  container_app_environment_resource_id = module.container_apps_environment.resource_id
+
+  # Revision mode
+  revision_mode = "Single"
+
+  # Container configuration
+  template = {
+    containers = [{
+      name   = "postgres"
+      image  = "postgres:16-alpine"
+      cpu    = 0.5
+      memory = "1Gi"
+
+      env = [
+        {
+          name  = "POSTGRES_DB"
+          value = var.postgres_db_name
+        },
+        {
+          name  = "POSTGRES_USER"
+          value = var.postgres_user
+        },
+        {
+          name  = "POSTGRES_PASSWORD"
+          value = var.postgres_password
+        },
+        {
+          name  = "PGDATA"
+          value = "/var/lib/postgresql/data/pgdata"
+        }
+      ]
+
+      volume_mounts = [{
+        name       = "postgres-data"
+        mount_path = "/var/lib/postgresql/data"
+      }]
+    }]
+
+    min_replicas = 1
+    max_replicas = 1
+
+    volume = [{
+      name         = "postgres-data"
+      storage_type = "EmptyDir"
+    }]
+  }
+
+  # Internal-only ingress for database access
+  ingress = {
+    external_enabled = false
+    target_port      = 5432
+    transport        = "tcp"
+    traffic_weight = [{
+      latest_revision = true
+      percentage      = 100
+    }]
+  }
+
+  tags = var.tags
+
+  depends_on = [module.container_apps_environment]
+}
+
 # Backend Container App using Azure Verified Module
 module "backend_container_app" {
   source  = "Azure/avm-res-app-containerapp/azurerm"
@@ -92,6 +162,30 @@ module "backend_container_app" {
           value = "3000"
         },
         {
+          name  = "DB_TYPE"
+          value = "postgres"
+        },
+        {
+          name  = "DB_HOST"
+          value = module.postgres_container_app.fqdn
+        },
+        {
+          name  = "DB_PORT"
+          value = "5432"
+        },
+        {
+          name  = "DB_NAME"
+          value = var.postgres_db_name
+        },
+        {
+          name  = "DB_USER"
+          value = var.postgres_user
+        },
+        {
+          name  = "DB_PASSWORD"
+          value = var.postgres_password
+        },
+        {
           name  = "RESEND_API_KEY"
           value = var.resend_api_key
         },
@@ -125,8 +219,11 @@ module "backend_container_app" {
 
   tags = var.tags
 
-  depends_on = [module.container_apps_environment,
-  module.avm-res-managedidentity-userassignedidentity]
+  depends_on = [
+    module.container_apps_environment,
+    module.avm-res-managedidentity-userassignedidentity,
+    module.postgres_container_app
+  ]
 
 }
 

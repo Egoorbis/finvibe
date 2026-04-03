@@ -89,3 +89,21 @@ variable "resend_from_email" {
   type        = string
   default     = "noreply@finvibe.com"
 }
+
+variable "postgres_db_name" {
+  description = "PostgreSQL database name"
+  type        = string
+  default     = "finvibe"
+}
+
+variable "postgres_user" {
+  description = "PostgreSQL username"
+  type        = string
+  default     = "finvibe_user"
+}
+
+variable "postgres_password" {
+  description = "PostgreSQL password"
+  type        = string
+  sensitive   = true
+}

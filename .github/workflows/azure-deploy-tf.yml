@@ -39,6 +39,7 @@ jobs:
       # Terraform variables
       # TF_LOG: WARN
       TF_VAR_resend_api_key: ${{ secrets.RESEND_API_KEY }}
+      TF_VAR_postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
 
     steps:
       - name: Checkout Code
@@ -59,6 +60,10 @@ jobs:
           -backend-config="storage_account_name=$BACKEND_STORAGE_ACCOUNT" \
           -backend-config="container_name=$BACKEND_CONTAINER" \
           -backend-config="key=$BACKEND_KEY" \
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate
 
       - name: Terraform Plan
         id: plan
