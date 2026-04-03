@@ -25,37 +25,83 @@ All infrastructure is defined in Terraform configuration files in the `infra/` d
 
 ## Deployment Methods
 
-You can deploy FinVibe to Azure in two ways:
+There are two ways to deploy FinVibe to Azure:
 
 ### Option 1: Automated Deployment via GitHub Actions (Recommended)
 
-This method automatically deploys when you push to the `main` branch.
+This method automatically deploys infrastructure changes when you push to the `main` branch.
 
-### Option 2: Manual Deployment with Terraform
+**Workflow**: `.github/workflows/azure-deploy-tf.yml`
+**Trigger**: Push to `main` branch (for infra changes) or manual dispatch
 
-Deploy directly from your local machine using Terraform CLI.
+### Option 2: Manual Deployment with Terraform CLI
+
+Deploy directly from your local machine using Terraform commands.
 
 ---
 
 ## Option 1: Automated Deployment via GitHub Actions
 
-### Step 1: Azure Authentication Setup
+### Step 1: Azure Backend Storage Setup
 
-The deployment uses **OpenID Connect (OIDC)** authentication, which is the modern, secure method recommended by Azure and GitHub.
+The Terraform backend stores state files in Azure Storage with OIDC authentication enabled.
 
-#### 1.1 Create an Azure AD Application
+#### 1.1 Create Storage Account for Terraform State
 
 ```bash
 # Login to Azure
 az login
 
+# Set variables
+RESOURCE_GROUP="rg-terraform-backend"
+STORAGE_ACCOUNT="sttfstate$(openssl rand -hex 4)"  # Must be globally unique
+CONTAINER_NAME="tfstate"
+LOCATION="swedencentral"
+
+# Create resource group
+az group create --name $RESOURCE_GROUP --location $LOCATION
+
+# Create storage account
+az storage account create \
+  --name $STORAGE_ACCOUNT \
+  --resource-group $RESOURCE_GROUP \
+  --location $LOCATION \
+  --sku Standard_LRS \
+  --allow-blob-public-access false \
+  --https-only true
+
+# Disable key-based authentication (OIDC only)
+az storage account update \
+  --name $STORAGE_ACCOUNT \
+  --resource-group $RESOURCE_GROUP \
+  --allow-shared-key-access false
+
+# Create container for state files
+az storage container create \
+  --name $CONTAINER_NAME \
+  --account-name $STORAGE_ACCOUNT \
+  --auth-mode login
+```
+
+**Save these values** - you'll need them for GitHub secrets:
+- Storage Account Name: `$STORAGE_ACCOUNT`
+- Container Name: `tfstate`
+- Resource Group: `rg-terraform-backend`
+
+### Step 2: Azure AD Application Setup
+
+Create an application and configure OIDC for GitHub Actions.
+
+#### 2.1 Create Azure AD Application
+
+```bash
 # Create Azure AD application
 az ad app create --display-name "finvibe-github-actions"
 ```
 
 Note the `appId` from the output - this is your `AZURE_CLIENT_ID`.
 
-#### 1.2 Create a Service Principal
+#### 2.2 Create Service Principal and Configure OIDC
 
 ```bash
 # Create service principal
@@ -68,7 +114,9 @@ az account show --query tenantId -o tsv
 az account show --query id -o tsv
 ```
 
-#### 1.3 Configure Federated Credentials
+#### 2.3 Configure Federated Credentials for GitHub
+
+Set up OIDC trust between Azure and GitHub:
 
 Configure the Azure AD application to trust GitHub Actions:
 
@@ -83,7 +131,9 @@ az ad app federated-credential create \
   }'
 ```
 
-#### 1.4 Assign Azure Permissions
+#### 2.4 Assign Azure Permissions
+
+Grant the service principal access to your subscription and the Terraform backend:
 
 Grant the service principal Contributor permissions:
 
@@ -91,44 +141,66 @@ Grant the service principal Contributor permissions:
 # Get subscription ID
 SUBSCRIPTION_ID=$(az account show --query id -o tsv)
 
-# Assign Contributor role
+# Assign Contributor role to subscription (for creating resources)
 az role assignment create \
   --assignee <appId> \
   --role Contributor \
   --scope /subscriptions/$SUBSCRIPTION_ID
+
+# Assign Storage Blob Data Contributor for Terraform state
+az role assignment create \
+  --assignee <appId> \
+  --role "Storage Blob Data Contributor" \
+  --scope /subscriptions/$SUBSCRIPTION_ID/resourceGroups/rg-terraform-backend/providers/Microsoft.Storage/storageAccounts/$STORAGE_ACCOUNT
 ```
 
-### Step 2: Configure GitHub Secrets
+### Step 3: Configure GitHub Secrets
 
 Add these secrets to your GitHub repository (Settings → Secrets and variables → Actions):
 
 | Secret Name | Value | Description |
 |-------------|-------|-------------|
-| `AZURE_CLIENT_ID` | `<appId>` | Application (client) ID from Step 1.1 |
-| `AZURE_TENANT_ID` | Your tenant ID | Azure AD tenant ID from Step 1.2 |
-| `AZURE_SUBSCRIPTION_ID` | Your subscription ID | Azure subscription ID from Step 1.2 |
-| `ACR_NAME` | Your unique ACR name | (Optional) Container registry name |
+| `AZURE_CLIENT_ID` | `<appId>` | Application (client) ID from Step 2.1 |
+| `AZURE_TENANT_ID` | Your tenant ID | Azure AD tenant ID from Step 2.2 |
+| `AZURE_SUBSCRIPTION_ID` | Your subscription ID | Azure subscription ID from Step 2.2 |
+| `BACKEND_RESOURCE_GROUP` | `rg-terraform-backend` | Terraform backend resource group |
+| `BACKEND_STORAGE_ACCOUNT` | `$STORAGE_ACCOUNT` | Terraform state storage account name |
+| `BACKEND_CONTAINER_NAME` | `tfstate` | Terraform state container name |
+| `BACKEND_KEY` | `finvibe.tfstate` | Terraform state file name |
+| `RESEND_API_KEY` | Your Resend API key | (Optional) For email functionality |
 
-### Step 3: Deploy
+### Step 4: Deploy via GitHub Actions
 
-Push to the `main` branch or manually trigger the workflow:
+The deployment workflow (`.github/workflows/azure-deploy-tf.yml`) triggers automatically:
 
+**Automatic Trigger:**
+- Push to `main` branch with changes to `infra/` directory
+- Pull request to `main` (plan only, no apply)
+
+**Manual Trigger:**
+1. Go to Actions tab in GitHub
+2. Select "Deploy to Azure with Terraform"
+3. Click "Run workflow"
+4. Select branch (default: main)
+5. Click "Run workflow"
+
+**Workflow Steps:**
+1. ✅ Checkout code
+2. ✅ Setup Terraform
+3. ✅ Initialize Terraform with Azure backend (OIDC authentication)
+4. ✅ Plan infrastructure changes
+5. ✅ Upload plan artifact
+6. ✅ Apply changes (only on push to main)
+
+**First Deployment:**
 ```bash
+# Make a commit to trigger deployment
+git add .
+git commit -m "Initial Azure deployment"
 git push origin main
 ```
 
-Or trigger manually from GitHub:
-1. Go to Actions tab
-2. Select "Deploy to Azure with Terraform"
-3. Click "Run workflow"
-
-The GitHub Actions workflow will:
-1. ✅ Plan infrastructure changes with Terraform
-2. ✅ Apply infrastructure changes if needed
-3. ✅ Build and push Docker images to ACR
-4. ✅ Deploy containers to Azure Container Apps
-5. ✅ Run database migrations
-6. ✅ Display deployment URLs
+Monitor the workflow in the Actions tab. The first deployment takes ~10-15 minutes.
 
 ---
 
