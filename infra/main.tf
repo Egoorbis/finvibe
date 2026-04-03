@@ -90,6 +90,14 @@ module "backend_container_app" {
         {
           name  = "PORT"
           value = "3000"
+        },
+        {
+          name  = "RESEND_API_KEY"
+          value = var.resend_api_key
+        },
+        {
+          name  = "RESEND_FROM_EMAIL"
+          value = var.resend_from_email
         }
       ]
     }]
