@@ -151,7 +151,7 @@ module "frontend_container_app" {
       env = [
         {
           name  = "VITE_API_URL"
-          value = "https://${data.azurerm_container_app.backend.ingress[0].fqdn}/api"
+          value = "https://${module.backend_container_app.fqdn_url[0]}/api"
         }
       ]
     }]
