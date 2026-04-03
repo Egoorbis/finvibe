@@ -33,21 +33,16 @@ jobs:
       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       BACKEND_RESOURCE_GROUP: ${{ secrets.BACKEND_RESOURCE_GROUP }}
       BACKEND_STORAGE_ACCOUNT: ${{ secrets.BACKEND_STORAGE_ACCOUNT }}
-      BACKEND_CONTAINER: ${{ secrets.BACKEND_CONTAINER }}
+      BACKEND_CONTAINER: ${{ secrets.BACKEND_CONTAINER_NAME }}
       BACKEND_KEY: ${{ secrets.BACKEND_KEY }}
 
       # Terraform variables
       # TF_LOG: WARN
-      TF_VAR_github_token: ${{ secrets.GH_PAT }}
-      TF_VAR_azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-      TF_VAR_backend_resource_group: ${{ secrets.BACKEND_RESOURCE_GROUP }}
-      TF_VAR_backend_storage_account: ${{ secrets.BACKEND_STORAGE_ACCOUNT }}
-      TF_VAR_backend_container: ${{ secrets.BACKEND_CONTAINER }}
+      TF_VAR_resend_api_key: ${{ secrets.RESEND_API_KEY }}
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v4
@@ -73,7 +68,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: terraformPlan
-          path: "./projects/terraform.tfplan"
+          path: "./infra/terraform.tfplan"
 
       - name: Terraform Apply
         id: apply
