@@ -1,4 +1,5 @@
 // Input sanitization middleware
+import sanitizeHtml from 'sanitize-html';
 export const sanitizeInput = (req, res, next) => {
   // Sanitize request body
   if (req.body) {
@@ -43,14 +44,14 @@ function sanitizeValue(value) {
     return value;
   }
 
-  // Remove potential XSS attacks
-  return value
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/javascript:/gi, '')
-    .replace(/data:/gi, '')
-    .replace(/vbscript:/gi, '')
-    .replace(/on\w+\s*=/gi, '')
-    .trim();
+  // Use a well-tested library to remove potential XSS attacks
+  const sanitized = sanitizeHtml(value, {
+    allowedTags: [],
+    allowedAttributes: {},
+    allowedSchemes: ['http', 'https', 'mailto'],
+  });
+
+  return typeof sanitized === 'string' ? sanitized.trim() : '';
 }
 
 export default sanitizeInput;
