@@ -50,7 +50,7 @@ cp .env.example .env
 
 Initialize the database:
 ```bash
-npm run db:migrate
+npm run migrate
 ```
 
 You should see:
@@ -61,7 +61,7 @@ Tables created: accounts, categories, transactions, budgets
 
 Seed default categories:
 ```bash
-npm run db:seed
+npm run seed
 ```
 
 You should see:
@@ -193,8 +193,8 @@ cd backend
 # Delete the database
 rm database.db
 # Recreate it
-npm run db:migrate
-npm run db:seed
+npm run migrate
+npm run seed
 ```
 
 ## Development Tips

@@ -38,13 +38,15 @@ A modern, full-stack personal finance tracker to help you manage your expenses, 
 
 ## Deployment Options
 
-### Option 1: Azure Container Apps (Cloud Deployment)
+### Option 1: Azure Container Apps (Recommended for Production)
 
-Deploy FinVibe to Azure using automated GitHub Actions workflow. See the **[Azure Deployment Guide](AZURE_DEPLOYMENT.md)** for setup instructions, including:
-- OIDC authentication configuration
-- Azure infrastructure setup
-- GitHub secrets configuration
-- Monitoring and troubleshooting
+Deploy FinVibe to Azure using Terraform and GitHub Actions. The deployment uses:
+- **Infrastructure as Code**: Terraform with Azure Verified Modules (AVM)
+- **Automated CI/CD**: GitHub Actions with OIDC authentication
+- **Container orchestration**: Azure Container Apps with auto-scaling
+- **Managed services**: Azure Container Registry, Log Analytics
+
+See the **[Azure Deployment Guide](AZURE_DEPLOYMENT.md)** for complete setup instructions.
 
 ### Option 2: Docker Deployment (Recommended for Self-Hosting)
 
@@ -107,10 +109,10 @@ npm install
 # Create environment file
 cp .env.example .env
 
-# Initialize the database
+# Initialize the database (creates tables)
 npm run migrate
 
-# Seed default categories
+# Seed default categories (adds starter data)
 npm run seed
 
 # Start the development server
@@ -150,9 +152,15 @@ http://localhost:5173
 
 ## Documentation
 
-- **[Azure Deployment Guide](AZURE_DEPLOYMENT.md)** - Complete guide for deploying to Azure Container Apps with GitHub Actions
-- **[Docker Setup Guide](DOCKER_SETUP.md)** - Complete guide for Docker deployment, verification, and troubleshooting
-- **[Environment Variables](ENVIRONMENT.md)** - Comprehensive environment configuration documentation
+### Deployment & Setup
+- **[Azure Deployment Guide](AZURE_DEPLOYMENT.md)** - Production deployment using Terraform and GitHub Actions
+- **[Docker Setup Guide](DOCKER_SETUP.md)** - Local deployment with Docker Compose
+- **[Getting Started](GETTING_STARTED.md)** - Step-by-step local development setup
+- **[Windows Setup](WINDOWS_SETUP.md)** - Windows-specific installation instructions
+
+### Configuration
+- **[Environment Variables](ENVIRONMENT.md)** - Environment configuration reference
+- **[Terraform Infrastructure](infra/README.md)** - Infrastructure as Code documentation
 
 ---
 
