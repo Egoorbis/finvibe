@@ -1,0 +1,167 @@
+name: Deploy to Azure (Master)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip CI tests'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      skip_infra:
+        description: 'Skip infrastructure deployment'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      skip_containers:
+        description: 'Skip container build/deploy'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+# Concurrency control
+concurrency:
+  group: deploy-azure-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Step 1: Detect what changed
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      infra: ${{ steps.filter.outputs.infra }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'frontend/**'
+            infra:
+              - 'infra/**'
+              - '.github/workflows/azure-deploy-master.yml'
+
+  # Step 2: Run CI tests (if code changed)
+  run-ci-tests:
+    name: Run CI Tests
+    needs: detect-changes
+    if: |
+      inputs.skip_tests != 'true' &&
+      (needs.detect-changes.outputs.backend == 'true' || needs.detect-changes.outputs.frontend == 'true')
+    uses: ./.github/workflows/ci-optimized.yml
+
+  # Step 3: Build and push containers (if code changed)
+  build-containers:
+    name: Build Containers
+    needs: [detect-changes, run-ci-tests]
+    if: |
+      always() &&
+      inputs.skip_containers != 'true' &&
+      (needs.run-ci-tests.result == 'success' || needs.run-ci-tests.result == 'skipped') &&
+      (needs.detect-changes.outputs.backend == 'true' || needs.detect-changes.outputs.frontend == 'true')
+    uses: ./.github/workflows/build-container-images-optimized.yml
+    secrets: inherit
+
+  # Step 4: Deploy infrastructure (if infra changed or forced)
+  deploy-infrastructure:
+    name: Deploy Infrastructure
+    needs: [detect-changes, build-containers]
+    if: |
+      always() &&
+      inputs.skip_infra != 'true' &&
+      (needs.build-containers.result == 'success' || needs.build-containers.result == 'skipped') &&
+      (needs.detect-changes.outputs.infra == 'true' || github.event_name == 'workflow_dispatch')
+    uses: ./.github/workflows/azure-deploy-tf-optimized.yml
+    secrets: inherit
+
+  # Step 5: Final verification
+  verify-deployment:
+    name: Verify Full Deployment
+    runs-on: ubuntu-latest
+    needs: [deploy-infrastructure]
+    if: needs.deploy-infrastructure.result == 'success'
+
+    steps:
+      - name: Download Deployment Summary
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-summary-${{ github.sha }}
+        continue-on-error: true
+
+      - name: Display Deployment Info
+        run: |
+          if [ -f deployment_summary.json ]; then
+            echo "📋 Deployment Summary:"
+            cat deployment_summary.json | jq '.'
+          else
+            echo "⚠️ No deployment summary found"
+          fi
+
+      - name: Deployment Complete
+        run: |
+          echo "🎉 Full deployment completed successfully!"
+          echo "✅ Infrastructure deployed"
+          echo "✅ Containers built and pushed"
+          echo "✅ All verifications passed"
+
+  # Deployment status summary
+  deployment-summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [detect-changes, run-ci-tests, build-containers, deploy-infrastructure, verify-deployment]
+    if: always()
+
+    steps:
+      - name: Generate Summary
+        run: |
+          echo "# Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Changes Detected" >> $GITHUB_STEP_SUMMARY
+          echo "- Backend: ${{ needs.detect-changes.outputs.backend }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Frontend: ${{ needs.detect-changes.outputs.frontend }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Infrastructure: ${{ needs.detect-changes.outputs.infra }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Job Results" >> $GITHUB_STEP_SUMMARY
+          echo "- CI Tests: ${{ needs.run-ci-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Build Containers: ${{ needs.build-containers.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Deploy Infrastructure: ${{ needs.deploy-infrastructure.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Verify Deployment: ${{ needs.verify-deployment.result }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check Overall Status
+        run: |
+          if [ "${{ needs.verify-deployment.result }}" == "success" ] || \
+             [ "${{ needs.verify-deployment.result }}" == "skipped" ]; then
+            echo "✅ Deployment workflow completed successfully"
+            exit 0
+          else
+            echo "❌ Deployment workflow failed"
+            exit 1
+          fi

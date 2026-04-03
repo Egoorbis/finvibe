@@ -1,0 +1,321 @@
+name: Deploy to Azure with Terraform (Optimized)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "infra/**"
+      - ".github/workflows/azure-deploy-tf-optimized.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "infra/**"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write  # For PR comments
+
+# Concurrency control - prevent parallel runs on same branch
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: false  # Queue instead of cancel
+
+env:
+  TERRAFORM_VERSION: "1.11"
+
+jobs:
+  terraform-plan:
+    name: "Terraform Plan"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./infra
+    env:
+      ARM_USE_OIDC: true
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      BACKEND_RESOURCE_GROUP: ${{ secrets.BACKEND_RESOURCE_GROUP }}
+      BACKEND_STORAGE_ACCOUNT: ${{ secrets.BACKEND_STORAGE_ACCOUNT }}
+      BACKEND_CONTAINER: ${{ secrets.BACKEND_CONTAINER_NAME }}
+      BACKEND_KEY: ${{ secrets.BACKEND_KEY }}
+      TF_VAR_resend_api_key: ${{ secrets.RESEND_API_KEY }}
+      TF_VAR_postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
+
+    outputs:
+      plan_exitcode: ${{ steps.plan.outputs.exitcode }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1  # Shallow clone for speed
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false  # Better for parsing outputs
+
+      # Cache Terraform providers and modules
+      - name: Cache Terraform
+        uses: actions/cache@v4
+        with:
+          path: |
+            infra/.terraform
+            infra/.terraform.lock.hcl
+          key: terraform-${{ runner.os }}-${{ hashFiles('infra/.terraform.lock.hcl') }}
+          restore-keys: |
+            terraform-${{ runner.os }}-
+
+      - name: Terraform Version
+        id: version
+        run: terraform --version
+
+      - name: Terraform Format Check
+        id: fmt
+        run: terraform fmt -check -recursive
+        continue-on-error: true
+
+      - name: Terraform Init
+        id: init
+        run: |
+          terraform init \
+          -backend-config="resource_group_name=$BACKEND_RESOURCE_GROUP" \
+          -backend-config="storage_account_name=$BACKEND_STORAGE_ACCOUNT" \
+          -backend-config="container_name=$BACKEND_CONTAINER" \
+          -backend-config="key=$BACKEND_KEY"
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          terraform plan -out=terraform.tfplan -input=false -lock-timeout=300s -no-color -detailed-exitcode
+        continue-on-error: true
+
+      # Save plan for apply job
+      - name: Upload Terraform Plan
+        if: steps.plan.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-${{ github.sha }}
+          path: infra/terraform.tfplan
+          retention-days: 5
+
+      # Generate human-readable plan output
+      - name: Generate Plan Output
+        if: steps.plan.outcome == 'success'
+        id: show
+        run: |
+          terraform show -no-color terraform.tfplan > plan_output.txt
+          echo "plan_output<<EOF" >> $GITHUB_OUTPUT
+          cat plan_output.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      # Comment PR with plan results
+      - name: Comment Plan on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          PLAN_OUTPUT: ${{ steps.show.outputs.plan_output }}
+          FMT_OUTCOME: ${{ steps.fmt.outcome }}
+          PLAN_EXITCODE: ${{ steps.plan.outputs.exitcode }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `### Terraform Plan Results 📋
+
+            #### Format Check 🖌️: \`${{ steps.fmt.outcome }}\`
+            #### Initialization ⚙️: \`${{ steps.init.outcome }}\`
+            #### Validation 🤖: \`${{ steps.validate.outcome }}\`
+            #### Plan 📖: \`${{ steps.plan.outcome }}\`
+
+            <details><summary>Show Plan Output</summary>
+
+            \`\`\`terraform
+            ${process.env.PLAN_OUTPUT}
+            \`\`\`
+
+            </details>
+
+            **Exit Code**: ${{ steps.plan.outputs.exitcode }}
+            - 0 = No changes
+            - 1 = Error
+            - 2 = Changes detected
+
+            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`*
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            });
+
+      - name: Terraform Plan Status
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
+
+  terraform-apply:
+    name: "Terraform Apply"
+    runs-on: ubuntu-latest
+    needs: terraform-plan
+    # Only apply on main branch pushes and if plan detected changes
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.terraform-plan.outputs.plan_exitcode == '2'
+    environment:
+      name: production  # Requires approval in GitHub settings
+      url: https://portal.azure.com
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./infra
+    env:
+      ARM_USE_OIDC: true
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      BACKEND_RESOURCE_GROUP: ${{ secrets.BACKEND_RESOURCE_GROUP }}
+      BACKEND_STORAGE_ACCOUNT: ${{ secrets.BACKEND_STORAGE_ACCOUNT }}
+      BACKEND_CONTAINER: ${{ secrets.BACKEND_CONTAINER_NAME }}
+      BACKEND_KEY: ${{ secrets.BACKEND_KEY }}
+      TF_VAR_resend_api_key: ${{ secrets.RESEND_API_KEY }}
+      TF_VAR_postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
+
+    outputs:
+      backend_url: ${{ steps.outputs.outputs.backend_url }}
+      frontend_url: ${{ steps.outputs.outputs.frontend_url }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+
+      # Restore Terraform cache
+      - name: Cache Terraform
+        uses: actions/cache@v4
+        with:
+          path: |
+            infra/.terraform
+            infra/.terraform.lock.hcl
+          key: terraform-${{ runner.os }}-${{ hashFiles('infra/.terraform.lock.hcl') }}
+          restore-keys: |
+            terraform-${{ runner.os }}-
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+          -backend-config="resource_group_name=$BACKEND_RESOURCE_GROUP" \
+          -backend-config="storage_account_name=$BACKEND_STORAGE_ACCOUNT" \
+          -backend-config="container_name=$BACKEND_CONTAINER" \
+          -backend-config="key=$BACKEND_KEY"
+
+      # Download the plan from previous job
+      - name: Download Terraform Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan-${{ github.sha }}
+          path: infra/
+
+      - name: Terraform Apply
+        id: apply
+        run: terraform apply -auto-approve -lock-timeout=300s terraform.tfplan
+
+      # Capture outputs for verification
+      - name: Terraform Output
+        id: outputs
+        run: |
+          echo "backend_url=$(terraform output -raw deployment_summary | jq -r '.backend_url')" >> $GITHUB_OUTPUT
+          echo "frontend_url=$(terraform output -raw deployment_summary | jq -r '.frontend_url')" >> $GITHUB_OUTPUT
+          terraform output -json deployment_summary > deployment_summary.json
+
+      - name: Upload Deployment Summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-summary-${{ github.sha }}
+          path: infra/deployment_summary.json
+          retention-days: 30
+
+      - name: Terraform Apply Complete
+        run: |
+          echo "✅ Terraform apply completed successfully!"
+          echo "🌐 Backend URL: ${{ steps.outputs.outputs.backend_url }}"
+          echo "🌐 Frontend URL: ${{ steps.outputs.outputs.frontend_url }}"
+
+  verify-deployment:
+    name: "Verify Deployment"
+    runs-on: ubuntu-latest
+    needs: terraform-apply
+    if: needs.terraform-apply.result == 'success'
+
+    steps:
+      - name: Wait for Services
+        run: sleep 30  # Give services time to start
+
+      - name: Health Check - Backend
+        run: |
+          MAX_RETRIES=5
+          RETRY_COUNT=0
+          BACKEND_URL="${{ needs.terraform-apply.outputs.backend_url }}"
+
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES: Checking $BACKEND_URL/health"
+
+            if curl -f -s -o /dev/null -w "%{http_code}" "$BACKEND_URL/health" | grep -q "200"; then
+              echo "✅ Backend health check passed!"
+              exit 0
+            fi
+
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+              echo "⏳ Waiting 10 seconds before retry..."
+              sleep 10
+            fi
+          done
+
+          echo "❌ Backend health check failed after $MAX_RETRIES attempts"
+          exit 1
+
+      - name: Health Check - Frontend
+        run: |
+          MAX_RETRIES=5
+          RETRY_COUNT=0
+          FRONTEND_URL="${{ needs.terraform-apply.outputs.frontend_url }}"
+
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES: Checking $FRONTEND_URL"
+
+            if curl -f -s -o /dev/null -w "%{http_code}" "$FRONTEND_URL" | grep -q "200"; then
+              echo "✅ Frontend health check passed!"
+              exit 0
+            fi
+
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+              echo "⏳ Waiting 10 seconds before retry..."
+              sleep 10
+            fi
+          done
+
+          echo "❌ Frontend health check failed after $MAX_RETRIES attempts"
+          exit 1
+
+      - name: Deployment Success
+        run: |
+          echo "🎉 Deployment verified successfully!"
+          echo "✅ All health checks passed"
