@@ -18,126 +18,67 @@ permissions:
   id-token: write
   contents: read
 
-env:
-  TERRAFORM_VERSION: "1.11"
-  WORKING_DIR: ./infra
-  ACR_LOGIN_SERVER: metrreg-g3f3hxgzfbfkfxhk.azurecr.io
-  ARM_USE_OIDC: true
-  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-  BACKEND_RESOURCE_GROUP: ${{ secrets.BACKEND_RESOURCE_GROUP }}
-  BACKEND_STORAGE_ACCOUNT: ${{ secrets.BACKEND_STORAGE_ACCOUNT }}
-  BACKEND_CONTAINER: ${{ secrets.BACKEND_CONTAINER_NAME }}
-  BACKEND_KEY: ${{ secrets.BACKEND_KEY }}
-
 jobs:
-  terraform-plan:
-    name: Terraform Plan
+  terraform:
+    name: "Terraform Action"
     runs-on: ubuntu-latest
-    outputs:
-      tfplanExitCode: ${{ steps.plan.outputs.exitcode }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./projects
+    env:
+      ARM_USE_OIDC: true
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      BACKEND_RESOURCE_GROUP: ${{ secrets.BACKEND_RESOURCE_GROUP }}
+      BACKEND_STORAGE_ACCOUNT: ${{ secrets.BACKEND_STORAGE_ACCOUNT }}
+      BACKEND_CONTAINER: ${{ secrets.BACKEND_CONTAINER }}
+      BACKEND_KEY: ${{ secrets.BACKEND_KEY }}
+
+      # Terraform variables
+      # TF_LOG: WARN
+      TF_VAR_github_token: ${{ secrets.GH_PAT }}
+      TF_VAR_azure_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      TF_VAR_azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+      TF_VAR_backend_resource_group: ${{ secrets.BACKEND_RESOURCE_GROUP }}
+      TF_VAR_backend_storage_account: ${{ secrets.BACKEND_STORAGE_ACCOUNT }}
+      TF_VAR_backend_container: ${{ secrets.BACKEND_CONTAINER }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Checkout Code
+        uses: actions/checkout@v6
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v4
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: "Terraform Version"
+        id: version
+        run: terraform --version
 
       - name: Terraform Init
-        working-directory: ${{ env.WORKING_DIR }}
+        id: init
         run: |
           terraform init \
           -backend-config="resource_group_name=$BACKEND_RESOURCE_GROUP" \
           -backend-config="storage_account_name=$BACKEND_STORAGE_ACCOUNT" \
           -backend-config="container_name=$BACKEND_CONTAINER" \
           -backend-config="key=$BACKEND_KEY" \
-          -backend-config="use_oidc=true"
-
-      - name: Terraform Validate
-        working-directory: ${{ env.WORKING_DIR }}
-        run: terraform validate
 
       - name: Terraform Plan
         id: plan
-        working-directory: ${{ env.WORKING_DIR }}
-        env:
-          TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        run: |
-          terraform plan -detailed-exitcode -no-color -out=tfplan
-          exitcode=$?
-          echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
-          if [ $exitcode -eq 1 ]; then
-            echo "Terraform plan failed"
-            exit 1
-          else
-            exit 0
-          fi
+        run: terraform plan -out=terraform.tfplan -input=false -lock-timeout=300s
 
-      - name: Upload Terraform Plan
+      - name: "Upload Terraform Plan to Working Directory"
         uses: actions/upload-artifact@v7
         with:
-          name: tfplan
-          path: ${{ env.WORKING_DIR }}/tfplan
-
-  terraform-apply:
-    name: Terraform Apply
-    needs: [terraform-plan]
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    outputs:
-      backend_app_name: ${{ steps.outputs.outputs.backend_app_name }}
-      frontend_app_name: ${{ steps.outputs.outputs.frontend_app_name }}
-      resource_group_name: ${{ steps.outputs.outputs.resource_group_name }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v4
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-          terraform_wrapper: false
-
-      - name: Download Terraform Plan
-        uses: actions/download-artifact@v4
-        with:
-          name: tfplan
-          path: ${{ env.WORKING_DIR }}
-
-      - name: Terraform Init
-        working-directory: ${{ env.WORKING_DIR }}
-        run: |
-          terraform init \
-          -backend-config="resource_group_name=$BACKEND_RESOURCE_GROUP" \
-          -backend-config="storage_account_name=$BACKEND_STORAGE_ACCOUNT" \
-          -backend-config="container_name=$BACKEND_CONTAINER" \
-          -backend-config="key=$BACKEND_KEY" \
-          -backend-config="use_oidc=true"
+          name: terraformPlan
+          path: "./projects/terraform.tfplan"
 
       - name: Terraform Apply
-        working-directory: ${{ env.WORKING_DIR }}
-        env:
-          TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        run: terraform apply -auto-approve tfplan
+        id: apply
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: terraform apply terraform.tfplan
 
       - name: Terraform Apply Complete
         run: |
