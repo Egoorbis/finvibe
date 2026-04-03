@@ -109,6 +109,12 @@ module "backend_container_app" {
     }]
   }
 
+  # Registry configuration for image pull authentication
+  registries = [{
+    server            = data.azurerm_container_registry.existing.login_server
+    identity          = module.avm-res-managedidentity-userassignedidentity.resource_id
+  }]
+
   tags = var.tags
 
   depends_on = [module.container_apps_environment,
@@ -145,7 +151,7 @@ module "frontend_container_app" {
       env = [
         {
           name  = "VITE_API_URL"
-          value = "https://${module.backend_container_app.resource.ingress[0].fqdn}/api"
+          value = "https://${data.azurerm_container_app.backend.ingress[0].fqdn}/api"
         }
       ]
     }]
@@ -164,6 +170,12 @@ module "frontend_container_app" {
       percentage      = 100
     }]
   }
+
+  # Registry configuration for image pull authentication
+  registries = [{
+    server            = data.azurerm_container_registry.existing.login_server
+    identity          = module.avm-res-managedidentity-userassignedidentity.resource_id
+  }]
 
   tags = var.tags
 

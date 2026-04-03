@@ -1,0 +1,238 @@
+# GitHub Copilot Instructions for Terraform Azure
+
+This repository contains Terraform configurations for deploying Azure infrastructure. Follow these instructions when assisting with this codebase.
+
+## General Guidelines
+
+### Terraform Best Practices
+
+1. **Always validate before planning**: Run `terraform validate` before `terraform plan`
+2. **Use Azure Verified Modules**: Prefer modules from the Azure Verified Modules registry
+3. **Follow HashiCorp style guide**: https://developer.hashicorp.com/terraform/language/style
+4. **State Management**: Always use remote state with encryption enabled
+
+### Security Requirements
+
+- **Never hardcode credentials** - Use Azure Key Vault or environment variables
+- **Prefer Managed Identity** - Use managed identity for Azure-hosted workloads
+- **Use OIDC for GitHub Actions** - Federated credentials over client secrets
+- **Enable encryption** - All storage and state files must be encrypted
+- **Least privilege RBAC** - Scope roles appropriately
+
+### Code Quality
+
+- Use meaningful resource names with consistent naming conventions
+- Add descriptions to all variables and outputs
+- Include tags on all resources for cost tracking and governance
+- Document complex logic with comments
+
+## Azure-Specific Guidelines
+
+### Authentication Priority
+
+1. Managed Identity (for Azure-hosted workloads)
+2. OIDC/Federated Credentials (for CI/CD)
+3. Service Principal with certificate
+4. Service Principal with secret (last resort)
+
+### Resource Naming Convention
+
+```
+{resource-type}-{workload}-{environment}-{region}-{instance}
+```
+
+Examples:
+- `rg-webapp-prod-eastus-001`
+- `st-tfstate-prod-eastus-001`
+- `kv-secrets-prod-eastus-001`
+
+### Required Tags
+
+All resources must include:
+- `environment` - dev/staging/prod
+- `project` - Project or workload name
+- `owner` - Team or individual owner
+- `cost-center` - For billing allocation
+- `managed-by` - terraform
+
+## MCP Tools Available
+
+When working with this repository, you have access to the following MCP servers:
+
+### HashiCorp Terraform MCP Server
+
+The primary MCP server for Terraform operations. Use these tools:
+
+- `search_modules` - Search Terraform Registry for modules by name/keyword
+- `get_module_details` - Get detailed documentation for a specific module
+- `search_providers` - Search for provider resources and data sources
+- `get_provider_details` - Get resource/data source documentation
+
+Example queries:
+```
+Use terraform MCP: search_modules for "azure storage account"
+Use terraform MCP: get_provider_details for azurerm_storage_account
+```
+
+### Azure MCP Tools
+
+#### azureterraformbestpractices
+**MUST call before generating any Azure Terraform code**
+
+Returns current Azure Terraform best practices, security recommendations, and provider-specific guidance.
+
+```bash
+azmcp azureterraformbestpractices get
+```
+
+#### get_bestpractices
+Get Azure best practices for specific resources and actions.
+
+**Valid parameters:**
+- `--resource` options:
+  - `general` - General Azure best practices
+  - `azurefunctions` - Azure Functions specific
+  - `static-web-app` - Azure Static Web Apps specific
+  - `coding-agent` - Coding agent configuration
+
+- `--action` options:
+  - `all` - Both code generation and deployment (required for static-web-app and coding-agent)
+  - `code-generation` - Code generation best practices (for general and azurefunctions)
+  - `deployment` - Deployment best practices (for general and azurefunctions)
+
+**Examples:**
+```bash
+azmcp get_bestpractices get --resource general --action code-generation
+azmcp get_bestpractices get --resource general --action deployment
+azmcp get_bestpractices get --resource azurefunctions --action all
+azmcp get_bestpractices get --resource static-web-app --action all
+```
+
+#### get_bestpractices AI App
+Get best practices for building AI applications in Azure:
+
+```bash
+azmcp get_bestpractices ai_app
+```
+
+#### azure_resources
+Query Azure Resource Graph for existing resources.
+
+### When to Use MCP Tools
+
+1. **Before writing Terraform code** - **MUST call** `azureterraformbestpractices get` to get current Terraform-specific recommendations
+2. **For general Azure infrastructure** - Use `get_bestpractices get --resource general --action code-generation` (covers all general Azure resources including Application Gateway, Storage, Networking, etc.)
+3. **For Azure Functions** - Use `get_bestpractices get --resource azurefunctions --action all`
+4. **For Azure Static Web Apps** - Use `get_bestpractices get --resource static-web-app --action all`
+5. **For configuring Azure MCP in coding agents** - Use `get_bestpractices get --resource coding-agent --action all`
+6. **When searching for modules** - Use `search_modules` to find AVM or community modules
+7. **When adding new resources** - Use `get_provider_details` for correct syntax
+8. **When reviewing infrastructure** - Use `azure_resources` to query existing state
+
+## Workflow Commands
+
+### Local Development
+
+```bash
+# Initialize Terraform
+terraform init
+
+# Validate configuration
+terraform validate
+
+# Format code
+terraform fmt -recursive
+
+# Generate plan
+terraform plan -out=tfplan
+
+# Apply changes
+terraform apply tfplan
+```
+
+### GitHub Actions
+
+- Push to `main` triggers plan on all environments
+- Pull requests show plan output as comments
+- Manual approval required for production applies
+- Drift detection runs on schedule
+
+## File Organization
+
+```
+infra/
+├── modules/                    # Custom reusable modules
+│   └── my-module/
+│       ├── main.tf             # Resource definitions
+│       ├── variables.tf        # Input variables with validation
+│       ├── outputs.tf          # Module outputs
+│       ├── versions.tf         # Provider version constraints
+│       ├── README.md           # Module documentation
+│       └── examples/           # Working examples (REQUIRED)
+│           └── basic/
+│               ├── main.tf
+│               ├── variables.tf
+│               ├── outputs.tf
+│               ├── terraform.tfvars.example  # Example configuration
+│               ├── example.auto.tfvars       # Auto-loaded overrides
+│               └── README.md                 # Example usage guide
+├── environments/               # Environment-specific configurations
+│   ├── dev/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   ├── outputs.tf
+│   │   └── terraform.tfvars
+│   ├── staging/
+│   └── prod/
+└── shared/                     # Shared resources (state, networking)
+```
+
+### Module Structure Requirements
+
+When creating custom modules:
+
+1. **Module Root** - Contains the actual Terraform resources
+   - `main.tf` - Resource definitions
+   - `variables.tf` - Input variables with descriptions and validation
+   - `outputs.tf` - Output values
+   - `versions.tf` - Provider version constraints
+   - `README.md` - Usage documentation
+
+2. **Examples Directory** - MUST contain working examples
+   - Location: `examples/` within the module directory
+   - Each example is a complete, deployable configuration
+   - Include multiple examples for different use cases
+
+3. **Example Structure** - Each example must include:
+   - `main.tf` - Working configuration using the module
+   - `variables.tf` - Variables with sensible defaults
+   - `outputs.tf` - Outputs from the example
+   - `terraform.tfvars.example` - Example values (copy to terraform.tfvars)
+   - `example.auto.tfvars` - Auto-loaded environment-specific overrides
+   - `README.md` - Usage instructions and prerequisites
+
+4. **Variable Files**:
+   - `terraform.tfvars.example` - Comprehensive example showing all options
+   - `example.auto.tfvars` - Environment-specific overrides (e.g., for testing)
+   - Users copy `.example` file to `terraform.tfvars` and customize
+
+### Example Usage Pattern
+
+```bash
+cd infra/modules/my-module/examples/basic
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your values
+terraform init
+terraform plan
+terraform apply
+```
+
+## Error Handling
+
+When encountering Terraform errors:
+
+1. Check Azure resource quotas and limits
+2. Verify RBAC permissions
+3. Check for naming conflicts
+4. Review provider version compatibility
+5. Validate state file consistency

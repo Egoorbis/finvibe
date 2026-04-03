@@ -42,37 +42,37 @@ output "container_apps_environment_name" {
 
 output "backend_app_name" {
   description = "Name of the backend Container App"
-  value       = module.backend_container_app.resource.name
+  value       = var.backend_app_name
 }
 
 output "backend_app_fqdn" {
   description = "Fully qualified domain name of the backend Container App"
-  value       = module.backend_container_app.resource.ingress[0].fqdn
+  value       = data.azurerm_container_app.backend.ingress[0].fqdn
 }
 
 output "backend_app_url" {
   description = "URL of the backend Container App"
-  value       = "https://${module.backend_container_app.resource.ingress[0].fqdn}"
+  value       = "https://${data.azurerm_container_app.backend.ingress[0].fqdn}"
 }
 
 output "backend_app_api_url" {
   description = "API URL of the backend Container App"
-  value       = "https://${module.backend_container_app.resource.ingress[0].fqdn}/api"
+  value       = "https://${data.azurerm_container_app.backend.ingress[0].fqdn}/api"
 }
 
 output "frontend_app_name" {
   description = "Name of the frontend Container App"
-  value       = module.frontend_container_app.resource.name
+  value       = var.frontend_app_name
 }
 
 output "frontend_app_fqdn" {
   description = "Fully qualified domain name of the frontend Container App"
-  value       = module.frontend_container_app.resource.ingress[0].fqdn
+  value       = data.azurerm_container_app.frontend.ingress[0].fqdn
 }
 
 output "frontend_app_url" {
   description = "URL of the frontend Container App"
-  value       = "https://${module.frontend_container_app.resource.ingress[0].fqdn}"
+  value       = "https://${data.azurerm_container_app.frontend.ingress[0].fqdn}"
 }
 
 output "deployment_summary" {
@@ -81,9 +81,9 @@ output "deployment_summary" {
     resource_group    = azurerm_resource_group.main.name
     location          = azurerm_resource_group.main.location
     acr_login_server  = data.azurerm_container_registry.existing.login_server
-    backend_url       = "https://${module.backend_container_app.resource.ingress[0].fqdn}"
-    backend_api_url   = "https://${module.backend_container_app.resource.ingress[0].fqdn}/api"
-    frontend_url      = "https://${module.frontend_container_app.resource.ingress[0].fqdn}"
+    backend_url       = "https://${data.azurerm_container_app.backend.ingress[0].fqdn}"
+    backend_api_url   = "https://${data.azurerm_container_app.backend.ingress[0].fqdn}/api"
+    frontend_url      = "https://${data.azurerm_container_app.frontend.ingress[0].fqdn}"
     azure_portal_url  = "https://portal.azure.com/#@/resource${azurerm_resource_group.main.id}"
   }
 }
