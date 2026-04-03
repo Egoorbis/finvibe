@@ -4,13 +4,26 @@ export const transactionController = {
   // GET /api/transactions
   async getAll(req, res) {
     try {
+      // Validate and sanitize limit parameter
+      let limit = null;
+      if (req.query.limit) {
+        const parsedLimit = parseInt(req.query.limit, 10);
+        // Validate: must be a valid positive integer within reasonable bounds
+        if (isNaN(parsedLimit) || parsedLimit < 1 || parsedLimit > 1000) {
+          return res.status(400).json({
+            error: 'Invalid limit parameter. Must be a positive integer between 1 and 1000.'
+          });
+        }
+        limit = parsedLimit;
+      }
+
       const filters = {
         type: req.query.type,
         account_id: req.query.account_id,
         category_id: req.query.category_id,
         start_date: req.query.start_date,
         end_date: req.query.end_date,
-        limit: req.query.limit ? parseInt(req.query.limit) : null
+        limit: limit
       };
 
       const transactions = await Transaction.getAll(req.user.id, filters);

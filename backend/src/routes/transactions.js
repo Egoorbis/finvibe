@@ -3,7 +3,7 @@ import { transactionController } from '../controllers/transactionController.js';
 import { authenticate } from '../middleware/auth.js';
 import multer from 'multer';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname, join, extname, basename } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -19,8 +19,18 @@ const storage = multer.diskStorage({
     cb(null, join(__dirname, '../../uploads'));
   },
   filename: function (req, file, cb) {
+    // Sanitize filename to prevent path traversal
+    // Generate a unique filename using timestamp and random number
+    // Use only the file extension from the original file (after sanitization)
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + '-' + file.originalname);
+
+    // Sanitize the original filename by removing path components and special chars
+    const sanitizedOriginalName = basename(file.originalname).replace(/[^a-zA-Z0-9.-]/g, '_');
+    const ext = extname(sanitizedOriginalName);
+
+    // Create filename: unique-suffix + sanitized-extension
+    const safeFilename = `${uniqueSuffix}${ext}`;
+    cb(null, safeFilename);
   }
 });
 

@@ -5,7 +5,7 @@ export const categoryController = {
   async getAll(req, res) {
     try {
       const { type } = req.query;
-      const categories = type ? await Category.getByType(type) : await Category.getAll();
+      const categories = type ? await Category.getByType(type, req.user.id) : await Category.getAll(req.user.id);
       res.json(categories);
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -15,7 +15,7 @@ export const categoryController = {
   // GET /api/categories/:id
   async getById(req, res) {
     try {
-      const category = await Category.getById(req.params.id);
+      const category = await Category.getById(req.params.id, req.user.id);
       if (!category) {
         return res.status(404).json({ error: 'Category not found' });
       }
@@ -28,7 +28,7 @@ export const categoryController = {
   // POST /api/categories
   async create(req, res) {
     try {
-      const category = await Category.create(req.body);
+      const category = await Category.create(req.body, req.user.id);
       res.status(201).json(category);
     } catch (error) {
       res.status(400).json({ error: error.message });
@@ -38,7 +38,7 @@ export const categoryController = {
   // PUT /api/categories/:id
   async update(req, res) {
     try {
-      const category = await Category.update(req.params.id, req.body);
+      const category = await Category.update(req.params.id, req.body, req.user.id);
       if (!category) {
         return res.status(404).json({ error: 'Category not found' });
       }
@@ -51,7 +51,7 @@ export const categoryController = {
   // DELETE /api/categories/:id
   async delete(req, res) {
     try {
-      const result = await Category.delete(req.params.id);
+      const result = await Category.delete(req.params.id, req.user.id);
       if (result.changes === 0) {
         return res.status(404).json({ error: 'Category not found' });
       }

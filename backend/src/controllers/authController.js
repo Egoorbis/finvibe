@@ -13,8 +13,9 @@ export const register = async (req, res) => {
       return res.status(400).json({ error: 'Username, email, and password are required' });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+    // Password validation - minimum 8 characters for better security
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
     }
 
     // Email validation
@@ -176,8 +177,8 @@ export const changePassword = async (req, res) => {
       return res.status(400).json({ error: 'Current password and new password are required' });
     }
 
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: 'New password must be at least 6 characters long' });
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'New password must be at least 8 characters long' });
     }
 
     // Get current user with password
@@ -265,20 +266,38 @@ export const resetPassword = async (req, res) => {
       return res.status(400).json({ error: 'Token and new password are required' });
     }
 
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
     }
 
     // Find user by reset token
     const user = await User.getByResetToken(token);
 
-    if (!user) {
+    // Use constant-time comparison to prevent timing attacks
+    // Check both validity and expiry before responding to avoid timing differences
+    const isTokenValid = user && user.reset_token;
+    const isTokenExpired = user ? new Date() > new Date(user.reset_token_expires) : true;
+
+    // If either invalid or expired, return the same error message
+    if (!isTokenValid || isTokenExpired) {
+      // Use constant-time comparison even for the token itself
+      if (isTokenValid && user.reset_token) {
+        // Perform a dummy comparison to maintain constant timing
+        crypto.timingSafeEqual(
+          Buffer.from(token.padEnd(64, '0')),
+          Buffer.from(user.reset_token.padEnd(64, '0'))
+        );
+      }
       return res.status(400).json({ error: 'Invalid or expired reset token' });
     }
 
-    // Check if token is expired
-    if (new Date() > new Date(user.reset_token_expires)) {
-      return res.status(400).json({ error: 'Reset token has expired' });
+    // Verify token with constant-time comparison
+    const tokenBuffer = Buffer.from(token);
+    const storedTokenBuffer = Buffer.from(user.reset_token);
+
+    if (tokenBuffer.length !== storedTokenBuffer.length ||
+        !crypto.timingSafeEqual(tokenBuffer, storedTokenBuffer)) {
+      return res.status(400).json({ error: 'Invalid or expired reset token' });
     }
 
     // Update password and clear reset token

@@ -5,7 +5,7 @@ export const securityHeaders = helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'"],  // Removed 'unsafe-inline' for better XSS protection
       scriptSrc: ["'self'"],
       imgSrc: ["'self'", 'data:', 'https:'],
       connectSrc: ["'self'"],
