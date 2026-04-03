@@ -9,6 +9,10 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  contents: read
+
 env:
   TERRAFORM_VERSION: "1.11"
   WORKING_DIR: ./infra
@@ -66,9 +70,6 @@ jobs:
     name: Terraform Plan
     needs: [build-and-push-images]
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
     outputs:
       tfplanExitCode: ${{ steps.plan.outputs.exitcode }}
 
@@ -111,7 +112,7 @@ jobs:
           fi
 
       - name: Upload Terraform Plan
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tfplan
           path: ${{ env.WORKING_DIR }}/tfplan
@@ -121,9 +122,6 @@ jobs:
     needs: [terraform-plan]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
     outputs:
       backend_app_name: ${{ steps.outputs.outputs.backend_app_name }}
       frontend_app_name: ${{ steps.outputs.outputs.frontend_app_name }}
@@ -173,10 +171,6 @@ jobs:
     needs: [terraform-apply]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
