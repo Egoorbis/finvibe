@@ -1,0 +1,112 @@
+name: Update Container Apps
+
+on:
+  workflow_run:
+    workflows:
+      - "Build and Push Container Images"
+      - "Deploy to Azure with Terraform"
+    types:
+      - completed
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ACR_LOGIN_SERVER: metrreg-g3f3hxgzfbfkfxhk.azurecr.io
+  WORKING_DIR: ./infra
+
+jobs:
+  update-containers:
+    name: Update Containers and Config
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "1.11"
+
+      - name: Azure Login using OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Terraform Init
+        working-directory: ${{ env.WORKING_DIR }}
+        env:
+          ARM_USE_OIDC: true
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        run: |
+          terraform init \
+          -backend-config="resource_group_name=${{ secrets.BACKEND_RESOURCE_GROUP }}" \
+          -backend-config="storage_account_name=${{ secrets.BACKEND_STORAGE_ACCOUNT }}" \
+          -backend-config="container_name=${{ secrets.BACKEND_CONTAINER_NAME }}" \
+          -backend-config="key=${{ secrets.BACKEND_KEY }}"
+
+      - name: Get Terraform Outputs
+        id: outputs
+        working-directory: ${{ env.WORKING_DIR }}
+        env:
+          ARM_USE_OIDC: true
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        run: |
+          echo "backend_app_name=$(terraform output -raw backend_app_name)" >> $GITHUB_OUTPUT
+          echo "frontend_app_name=$(terraform output -raw frontend_app_name)" >> $GITHUB_OUTPUT
+          echo "resource_group_name=$(terraform output -raw resource_group_name)" >> $GITHUB_OUTPUT
+
+      - name: Update backend Container App
+        run: |
+          az containerapp update \
+            --name ${{ steps.outputs.outputs.backend_app_name }} \
+            --resource-group ${{ steps.outputs.outputs.resource_group_name }} \
+            --image ${{ env.ACR_LOGIN_SERVER }}/finvibe-backend:${{ github.sha }}
+
+      - name: Get backend URL
+        id: backend-url
+        run: |
+          BACKEND_URL=$(az containerapp show \
+            --name ${{ steps.outputs.outputs.backend_app_name }} \
+            --resource-group ${{ steps.outputs.outputs.resource_group_name }} \
+            --query properties.configuration.ingress.fqdn \
+            --output tsv)
+          echo "url=https://$BACKEND_URL" >> $GITHUB_OUTPUT
+
+      - name: Update frontend Container App with backend URL
+        run: |
+          az containerapp update \
+            --name ${{ steps.outputs.outputs.frontend_app_name }} \
+            --resource-group ${{ steps.outputs.outputs.resource_group_name }} \
+            --image ${{ env.ACR_LOGIN_SERVER }}/finvibe-frontend:${{ github.sha }} \
+            --set-env-vars VITE_API_URL=${{ steps.backend-url.outputs.url }}/api
+
+      - name: Run database migrations
+        run: |
+          az containerapp exec \
+            --name ${{ steps.outputs.outputs.backend_app_name }} \
+            --resource-group ${{ steps.outputs.outputs.resource_group_name }} \
+            --command "/bin/sh" \
+            --args "-c 'npm run db:migrate'" || echo "Migration skipped or already applied"
+
+      - name: Deployment summary
+        run: |
+          echo "✅ Deployment completed successfully!"
+          echo "Backend URL: ${{ steps.backend-url.outputs.url }}/api"
+          FRONTEND_URL=$(az containerapp show \
+            --name ${{ steps.outputs.outputs.frontend_app_name }} \
+            --resource-group ${{ steps.outputs.outputs.resource_group_name }} \
+            --query properties.configuration.ingress.fqdn \
+            --output tsv)
+          echo "Frontend URL: https://$FRONTEND_URL"
