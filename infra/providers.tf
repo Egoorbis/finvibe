@@ -11,6 +11,8 @@ terraform {
       version = "~> 3.6"
     }
   }
+
+  backend "azurerm" {}
 }
 
 provider "azurerm" {
@@ -22,8 +24,4 @@ provider "azurerm" {
       purge_soft_delete_on_destroy = false
     }
   }
-}
-
-terraform {
-  backend "azurerm" {}
 }
