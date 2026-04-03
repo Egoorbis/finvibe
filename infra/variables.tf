@@ -77,3 +77,15 @@ variable "tags" {
     ManagedBy   = "terraform"
   }
 }
+
+variable "resend_api_key" {
+  description = "API key for Resend email service"
+  type        = string
+  sensitive   = true
+}
+
+variable "resend_from_email" {
+  description = "From email address for Resend"
+  type        = string
+  default     = "noreply@finvibe.com"
+}

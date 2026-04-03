@@ -90,6 +90,14 @@ module "backend_container_app" {
         {
           name  = "PORT"
           value = "3000"
+        },
+        {
+          name  = "RESEND_API_KEY"
+          value = var.resend_api_key
+        },
+        {
+          name  = "RESEND_FROM_EMAIL"
+          value = var.resend_from_email
         }
       ]
     }]
@@ -108,6 +116,12 @@ module "backend_container_app" {
       percentage      = 100
     }]
   }
+
+  # Registry configuration for image pull authentication
+  registries = [{
+    server            = data.azurerm_container_registry.existing.login_server
+    identity          = module.avm-res-managedidentity-userassignedidentity.resource_id
+  }]
 
   tags = var.tags
 
@@ -145,7 +159,7 @@ module "frontend_container_app" {
       env = [
         {
           name  = "VITE_API_URL"
-          value = "https://${module.backend_container_app.fqdn_url[0]}/api"
+          value = "${module.backend_container_app.fqdn_url}/api"
         }
       ]
     }]
@@ -164,6 +178,12 @@ module "frontend_container_app" {
       percentage      = 100
     }]
   }
+
+  # Registry configuration for image pull authentication
+  registries = [{
+    server            = data.azurerm_container_registry.existing.login_server
+    identity          = module.avm-res-managedidentity-userassignedidentity.resource_id
+  }]
 
   tags = var.tags
 

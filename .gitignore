@@ -42,3 +42,11 @@ temp/
 
 # OS
 Thumbs.db
+
+# Terraform local overrides (for development only)
+infra/backend_override.tf
+infra/terraform.tfvars
+infra/terraform.tfvars.json
+infra/.terraform/
+infra/.terraform.lock.hcl
+infra/tfplan

@@ -1,15 +1,32 @@
-name: Push Images to ACR
+name: Build and Push Container Images
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - ".github/workflows/build-container-images.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - "frontend/**"
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  contents: read
+
 env:
-  AZURE_RESOURCE_GROUP: rg-base-container
   ACR_NAME: metrreg
   ACR_LOGIN_SERVER: metrreg-g3f3hxgzfbfkfxhk.azurecr.io
 
 jobs:
-  push-images:
+  build-and-push-images:
+    name: Build and Push Container Images
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -19,7 +36,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Login to Azure
+      - name: Azure Login using OIDC
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}

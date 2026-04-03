@@ -1,6 +1,5 @@
 terraform {
   required_version = ">= 1.11"
-
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
@@ -12,8 +11,12 @@ terraform {
     }
   }
 
-  backend "azurerm" {}
+  backend "azurerm" {
+    use_azuread_auth = true
+    use_oidc         = true
+  }
 }
+
 
 provider "azurerm" {
   features {
@@ -24,4 +27,5 @@ provider "azurerm" {
       purge_soft_delete_on_destroy = false
     }
   }
+  use_oidc = true
 }
