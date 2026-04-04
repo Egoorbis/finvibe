@@ -97,8 +97,8 @@ module "postgres_container_app" {
       ]
 
       volume_mounts = [{
-        name       = "postgres-data"
-        mount_path = "/var/lib/postgresql/data"
+        name = "postgres-data"
+        path = "/var/lib/postgresql/data"
       }]
     }]
 
