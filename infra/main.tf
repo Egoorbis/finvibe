@@ -19,15 +19,15 @@ resource "azurerm_log_analytics_workspace" "container_apps" {
 }
 
 module "avm-res-managedidentity-userassignedidentity" {
-  source  = "Azure/avm-res-managedidentity-userassignedidentity/azurerm"
-  version = "0.5.0"
+  source              = "Azure/avm-res-managedidentity-userassignedidentity/azurerm"
+  version             = "0.5.0"
   name                = "uami-finvibe"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   role_assignments = {
     repository_contributor = {
-      role_definition_id_or_name  = "Container Registry Repository Contributor"
-      scope                = data.azurerm_container_registry.existing.id
+      role_definition_id_or_name = "Container Registry Repository Contributor"
+      scope                      = data.azurerm_container_registry.existing.id
     }
   }
 }
@@ -62,8 +62,8 @@ module "postgres_container_app" {
   source  = "Azure/avm-res-app-containerapp/azurerm"
   version = "0.8.0"
 
-  name                         = "finvibe-postgres"
-  resource_group_name          = azurerm_resource_group.main.name
+  name                                  = "finvibe-postgres"
+  resource_group_name                   = azurerm_resource_group.main.name
   container_app_environment_resource_id = module.container_apps_environment.resource_id
 
   # Revision mode
@@ -132,8 +132,8 @@ module "backend_container_app" {
   source  = "Azure/avm-res-app-containerapp/azurerm"
   version = "0.8.0"
 
-  name                         = var.backend_app_name
-  resource_group_name          = azurerm_resource_group.main.name
+  name                                  = var.backend_app_name
+  resource_group_name                   = azurerm_resource_group.main.name
   container_app_environment_resource_id = module.container_apps_environment.resource_id
 
   # Revision mode
@@ -213,8 +213,8 @@ module "backend_container_app" {
 
   # Registry configuration for image pull authentication
   registries = [{
-    server            = data.azurerm_container_registry.existing.login_server
-    identity          = module.avm-res-managedidentity-userassignedidentity.resource_id
+    server   = data.azurerm_container_registry.existing.login_server
+    identity = module.avm-res-managedidentity-userassignedidentity.resource_id
   }]
 
   tags = var.tags
@@ -233,8 +233,8 @@ module "frontend_container_app" {
   source  = "Azure/avm-res-app-containerapp/azurerm"
   version = "0.8.0"
 
-  name                         = var.frontend_app_name
-  resource_group_name          = azurerm_resource_group.main.name
+  name                                  = var.frontend_app_name
+  resource_group_name                   = azurerm_resource_group.main.name
   container_app_environment_resource_id = module.container_apps_environment.resource_id
 
   # Revision mode
@@ -278,8 +278,8 @@ module "frontend_container_app" {
 
   # Registry configuration for image pull authentication
   registries = [{
-    server            = data.azurerm_container_registry.existing.login_server
-    identity          = module.avm-res-managedidentity-userassignedidentity.resource_id
+    server   = data.azurerm_container_registry.existing.login_server
+    identity = module.avm-res-managedidentity-userassignedidentity.resource_id
   }]
 
   tags = var.tags
