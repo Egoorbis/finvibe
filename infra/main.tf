@@ -167,7 +167,7 @@ module "backend_container_app" {
         },
         {
           name  = "DB_HOST"
-          value = module.postgres_container_app.fqdn
+          value = module.postgres_container_app.latest_revision_fqdn
         },
         {
           name  = "DB_PORT"
