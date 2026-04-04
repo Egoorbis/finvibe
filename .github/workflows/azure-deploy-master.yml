@@ -74,7 +74,7 @@ jobs:
     name: Run CI Tests
     needs: detect-changes
     if: |
-      inputs.skip_tests != 'true' &&
+      (inputs.skip_tests != 'true' || github.event_name != 'workflow_dispatch') &&
       (needs.detect-changes.outputs.backend == 'true' || needs.detect-changes.outputs.frontend == 'true')
     uses: ./.github/workflows/ci-optimized.yml
 
@@ -84,7 +84,7 @@ jobs:
     needs: [detect-changes, run-ci-tests]
     if: |
       always() &&
-      inputs.skip_containers != 'true' &&
+      (inputs.skip_containers != 'true' || github.event_name != 'workflow_dispatch') &&
       (needs.run-ci-tests.result == 'success' || needs.run-ci-tests.result == 'skipped') &&
       (needs.detect-changes.outputs.backend == 'true' || needs.detect-changes.outputs.frontend == 'true')
     uses: ./.github/workflows/build-container-images-optimized.yml
@@ -96,7 +96,7 @@ jobs:
     needs: [detect-changes, build-containers]
     if: |
       always() &&
-      inputs.skip_infra != 'true' &&
+      (inputs.skip_infra != 'true' || github.event_name != 'workflow_dispatch') &&
       (needs.build-containers.result == 'success' || needs.build-containers.result == 'skipped') &&
       (needs.detect-changes.outputs.infra == 'true' || github.event_name == 'workflow_dispatch')
     uses: ./.github/workflows/azure-deploy-tf-optimized.yml
