@@ -6,7 +6,7 @@ let testDb;
 let Account;
 
 beforeAll(async () => {
-  testDb = setupTestDatabase();
+  testDb = await setupTestDatabase();
 
   // Mock the database import
   jest.unstable_mockModule('../../src/db/database.js', () => ({
