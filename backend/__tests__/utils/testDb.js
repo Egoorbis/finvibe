@@ -9,6 +9,7 @@ export function setupTestDatabase() {
   db.db.exec(`
     CREATE TABLE accounts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
       name TEXT NOT NULL,
       type TEXT NOT NULL CHECK(type IN ('bank', 'credit_card')),
       balance REAL NOT NULL DEFAULT 0,
@@ -19,16 +20,19 @@ export function setupTestDatabase() {
 
     CREATE TABLE categories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
       name TEXT NOT NULL,
       type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
       color TEXT,
       icon TEXT,
+      is_default INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE transactions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
       account_id INTEGER NOT NULL,
       category_id INTEGER NOT NULL,
       type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
@@ -45,6 +49,7 @@ export function setupTestDatabase() {
 
     CREATE TABLE budgets (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
       category_id INTEGER NOT NULL,
       amount REAL NOT NULL,
       period TEXT NOT NULL CHECK(period IN ('monthly', 'yearly')),
