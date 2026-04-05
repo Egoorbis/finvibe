@@ -105,7 +105,7 @@ module "postgres_container_app" {
     min_replicas = 1
     max_replicas = 1
 
-    volume = [{
+    volumes = [{
       name         = "postgres-data"
       storage_type = "EmptyDir"
     }]

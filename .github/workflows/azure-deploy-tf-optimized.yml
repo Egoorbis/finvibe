@@ -98,8 +98,13 @@ jobs:
       - name: Terraform Plan
         id: plan
         run: |
+          set +e
           terraform plan -out=terraform.tfplan -input=false -lock-timeout=300s -no-color -detailed-exitcode
-        continue-on-error: true
+          exitcode=$?
+          echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
+          # Exit code 0 = no changes, 2 = changes detected (both are success)
+          # Exit code 1 = actual error (fail the step)
+          [ $exitcode -eq 1 ] && exit 1 || exit 0
 
       # Save plan for apply job
       - name: Upload Terraform Plan
@@ -162,7 +167,7 @@ jobs:
             });
 
       - name: Terraform Plan Status
-        if: steps.plan.outcome == 'failure'
+        if: steps.plan.outputs.exitcode == '1'
         run: exit 1
 
   terraform-apply:
