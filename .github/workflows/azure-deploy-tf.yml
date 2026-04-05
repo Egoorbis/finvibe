@@ -40,6 +40,7 @@ jobs:
       # TF_LOG: WARN
       TF_VAR_resend_api_key: ${{ secrets.RESEND_API_KEY }}
       TF_VAR_postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
+      TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
 
     steps:
       - name: Checkout Code

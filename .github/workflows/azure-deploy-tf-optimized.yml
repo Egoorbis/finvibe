@@ -47,6 +47,7 @@ jobs:
       BACKEND_KEY: ${{ secrets.BACKEND_KEY }}
       TF_VAR_resend_api_key: ${{ secrets.RESEND_API_KEY }}
       TF_VAR_postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
+      TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
 
     outputs:
       plan_exitcode: ${{ steps.plan.outputs.exitcode }}
@@ -195,6 +196,7 @@ jobs:
       BACKEND_KEY: ${{ secrets.BACKEND_KEY }}
       TF_VAR_resend_api_key: ${{ secrets.RESEND_API_KEY }}
       TF_VAR_postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
+      TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
 
     outputs:
       backend_url: ${{ steps.outputs.outputs.backend_url }}
