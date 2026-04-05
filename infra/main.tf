@@ -19,15 +19,15 @@ resource "azurerm_log_analytics_workspace" "container_apps" {
 }
 
 module "avm-res-managedidentity-userassignedidentity" {
-  source  = "Azure/avm-res-managedidentity-userassignedidentity/azurerm"
-  version = "0.5.0"
+  source              = "Azure/avm-res-managedidentity-userassignedidentity/azurerm"
+  version             = "0.5.0"
   name                = "uami-finvibe"
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
   role_assignments = {
     repository_contributor = {
-      role_definition_id_or_name  = "Container Registry Repository Contributor"
-      scope                = data.azurerm_container_registry.existing.id
+      role_definition_id_or_name = "Container Registry Repository Contributor"
+      scope                      = data.azurerm_container_registry.existing.id
     }
   }
 }
@@ -57,13 +57,83 @@ module "container_apps_environment" {
   tags = var.tags
 }
 
+# PostgreSQL Container App using Azure Verified Module
+module "postgres_container_app" {
+  source  = "Azure/avm-res-app-containerapp/azurerm"
+  version = "0.8.0"
+
+  name                                  = "finvibe-postgres"
+  resource_group_name                   = azurerm_resource_group.main.name
+  container_app_environment_resource_id = module.container_apps_environment.resource_id
+
+  # Revision mode
+  revision_mode = "Single"
+
+  # Container configuration
+  template = {
+    containers = [{
+      name   = "postgres"
+      image  = "postgres:16-alpine"
+      cpu    = 0.5
+      memory = "1Gi"
+
+      env = [
+        {
+          name  = "POSTGRES_DB"
+          value = var.postgres_db_name
+        },
+        {
+          name  = "POSTGRES_USER"
+          value = var.postgres_user
+        },
+        {
+          name  = "POSTGRES_PASSWORD"
+          value = var.postgres_password
+        },
+        {
+          name  = "PGDATA"
+          value = "/var/lib/postgresql/data/pgdata"
+        }
+      ]
+
+      volume_mounts = [{
+        name = "postgres-data"
+        path = "/var/lib/postgresql/data"
+      }]
+    }]
+
+    min_replicas = 1
+    max_replicas = 1
+
+    volume = [{
+      name         = "postgres-data"
+      storage_type = "EmptyDir"
+    }]
+  }
+
+  # Internal-only ingress for database access
+  ingress = {
+    external_enabled = false
+    target_port      = 5432
+    transport        = "tcp"
+    traffic_weight = [{
+      latest_revision = true
+      percentage      = 100
+    }]
+  }
+
+  tags = var.tags
+
+  depends_on = [module.container_apps_environment]
+}
+
 # Backend Container App using Azure Verified Module
 module "backend_container_app" {
   source  = "Azure/avm-res-app-containerapp/azurerm"
   version = "0.8.0"
 
-  name                         = var.backend_app_name
-  resource_group_name          = azurerm_resource_group.main.name
+  name                                  = var.backend_app_name
+  resource_group_name                   = azurerm_resource_group.main.name
   container_app_environment_resource_id = module.container_apps_environment.resource_id
 
   # Revision mode
@@ -90,6 +160,30 @@ module "backend_container_app" {
         {
           name  = "PORT"
           value = "3000"
+        },
+        {
+          name  = "DB_TYPE"
+          value = "postgres"
+        },
+        {
+          name  = "DB_HOST"
+          value = module.postgres_container_app.latest_revision_fqdn
+        },
+        {
+          name  = "DB_PORT"
+          value = "5432"
+        },
+        {
+          name  = "DB_NAME"
+          value = var.postgres_db_name
+        },
+        {
+          name  = "DB_USER"
+          value = var.postgres_user
+        },
+        {
+          name  = "DB_PASSWORD"
+          value = var.postgres_password
         },
         {
           name  = "RESEND_API_KEY"
@@ -119,14 +213,17 @@ module "backend_container_app" {
 
   # Registry configuration for image pull authentication
   registries = [{
-    server            = data.azurerm_container_registry.existing.login_server
-    identity          = module.avm-res-managedidentity-userassignedidentity.resource_id
+    server   = data.azurerm_container_registry.existing.login_server
+    identity = module.avm-res-managedidentity-userassignedidentity.resource_id
   }]
 
   tags = var.tags
 
-  depends_on = [module.container_apps_environment,
-  module.avm-res-managedidentity-userassignedidentity]
+  depends_on = [
+    module.container_apps_environment,
+    module.avm-res-managedidentity-userassignedidentity,
+    module.postgres_container_app
+  ]
 
 }
 
@@ -136,8 +233,8 @@ module "frontend_container_app" {
   source  = "Azure/avm-res-app-containerapp/azurerm"
   version = "0.8.0"
 
-  name                         = var.frontend_app_name
-  resource_group_name          = azurerm_resource_group.main.name
+  name                                  = var.frontend_app_name
+  resource_group_name                   = azurerm_resource_group.main.name
   container_app_environment_resource_id = module.container_apps_environment.resource_id
 
   # Revision mode
@@ -181,8 +278,8 @@ module "frontend_container_app" {
 
   # Registry configuration for image pull authentication
   registries = [{
-    server            = data.azurerm_container_registry.existing.login_server
-    identity          = module.avm-res-managedidentity-userassignedidentity.resource_id
+    server   = data.azurerm_container_registry.existing.login_server
+    identity = module.avm-res-managedidentity-userassignedidentity.resource_id
   }]
 
   tags = var.tags
