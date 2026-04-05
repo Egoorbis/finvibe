@@ -1,9 +1,9 @@
 import DatabaseFactory from '../../src/db/database-factory.js';
 
 // Create test database
-export function setupTestDatabase() {
+export async function setupTestDatabase() {
   // Use in-memory SQLite database for tests
-  const db = DatabaseFactory.createTestDatabase();
+  const db = await DatabaseFactory.createTestDatabase();
 
   // Create schema (synchronous for setup)
   db.db.exec(`
