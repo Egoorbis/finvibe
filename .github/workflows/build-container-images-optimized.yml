@@ -58,11 +58,6 @@ jobs:
     name: Build ${{ matrix.service }}
     runs-on: ubuntu-latest
     needs: detect-changes
-    # Skip if no changes detected (except on workflow_dispatch)
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (matrix.service == 'backend' && needs.detect-changes.outputs.backend == 'true') ||
-      (matrix.service == 'frontend' && needs.detect-changes.outputs.frontend == 'true')
 
     permissions:
       id-token: write
@@ -75,15 +70,27 @@ jobs:
 
     steps:
       - name: Checkout code
+        if: |
+          github.event_name == 'workflow_dispatch' ||
+          (matrix.service == 'backend' && needs.detect-changes.outputs.backend == 'true') ||
+          (matrix.service == 'frontend' && needs.detect-changes.outputs.frontend == 'true')
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
       - name: Set up Docker Buildx
+        if: |
+          github.event_name == 'workflow_dispatch' ||
+          (matrix.service == 'backend' && needs.detect-changes.outputs.backend == 'true') ||
+          (matrix.service == 'frontend' && needs.detect-changes.outputs.frontend == 'true')
         uses: docker/setup-buildx-action@v3
 
       - name: Azure Login using OIDC
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: |
+          github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+          (github.event_name == 'workflow_dispatch' ||
+           (matrix.service == 'backend' && needs.detect-changes.outputs.backend == 'true') ||
+           (matrix.service == 'frontend' && needs.detect-changes.outputs.frontend == 'true'))
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -91,13 +98,21 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Login to Azure Container Registry
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: |
+          github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+          (github.event_name == 'workflow_dispatch' ||
+           (matrix.service == 'backend' && needs.detect-changes.outputs.backend == 'true') ||
+           (matrix.service == 'frontend' && needs.detect-changes.outputs.frontend == 'true'))
         run: |
           az acr login --name ${{ env.ACR_NAME }}
 
       # Build and push with advanced caching
       - name: Build and push ${{ matrix.service }} image
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: |
+          github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+          (github.event_name == 'workflow_dispatch' ||
+           (matrix.service == 'backend' && needs.detect-changes.outputs.backend == 'true') ||
+           (matrix.service == 'frontend' && needs.detect-changes.outputs.frontend == 'true'))
         uses: docker/build-push-action@v6
         with:
           context: ./${{ matrix.service }}
@@ -116,7 +131,11 @@ jobs:
 
       # Build only (no push) for PRs
       - name: Build ${{ matrix.service }} image (PR)
-        if: github.event_name == 'pull_request'
+        if: |
+          github.event_name == 'pull_request' &&
+          (github.event_name == 'workflow_dispatch' ||
+           (matrix.service == 'backend' && needs.detect-changes.outputs.backend == 'true') ||
+           (matrix.service == 'frontend' && needs.detect-changes.outputs.frontend == 'true'))
         uses: docker/build-push-action@v6
         with:
           context: ./${{ matrix.service }}
@@ -126,6 +145,10 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build Summary
+        if: |
+          github.event_name == 'workflow_dispatch' ||
+          (matrix.service == 'backend' && needs.detect-changes.outputs.backend == 'true') ||
+          (matrix.service == 'frontend' && needs.detect-changes.outputs.frontend == 'true')
         run: |
           echo "✅ ${{ matrix.service }} build completed successfully!"
           if [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == "refs/heads/main" ]; then
