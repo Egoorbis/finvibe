@@ -7,7 +7,7 @@ resource "azurerm_storage_account" "postgres" {
   account_replication_type = "LRS" # Locally-redundant storage for cost efficiency
 
   # Security settings
-  enable_https_traffic_only       = true
+  https_traffic_only_enabled      = true
   min_tls_version                 = "TLS1_2"
   allow_nested_items_to_be_public = false
 
