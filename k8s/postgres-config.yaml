@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  namespace: finvibe
+data:
+  POSTGRES_DB: "finvibe"
+  POSTGRES_USER: "finvibe"
