@@ -34,6 +34,12 @@ postgres_db_name   = "finvibe"
 postgres_user      = "finvibe_user"
 postgres_password  = "CHANGE_ME_SECURE_PASSWORD"
 
+# PostgreSQL Storage configuration (Azure Files)
+# Storage account name must be globally unique, 3-24 lowercase alphanumeric characters
+# Example: stfinvibepg123 or stfinvibe$(uuidgen | tr -d '-' | head -c 6)
+postgres_storage_account_name = "stfinvibepg"
+postgres_storage_quota_gb     = 32 # Storage size in GB (start with 32GB, increase as needed)
+
 # JWT secret for signing authentication tokens (minimum 32 characters)
 # Generate with: openssl rand -base64 32
 jwt_secret = "CHANGE_ME_SECURE_JWT_SECRET_MIN_32_CHARS"

@@ -107,7 +107,8 @@ module "postgres_container_app" {
 
     volumes = [{
       name         = "postgres-data"
-      storage_type = "EmptyDir"
+      storage_type = "AzureFile"
+      storage_name = azurerm_container_app_environment_storage.postgres.name
     }]
   }
 
@@ -124,7 +125,10 @@ module "postgres_container_app" {
 
   tags = var.tags
 
-  depends_on = [module.container_apps_environment]
+  depends_on = [
+    module.container_apps_environment,
+    azurerm_container_app_environment_storage.postgres
+  ]
 }
 
 # Backend Container App using Azure Verified Module
