@@ -129,3 +129,25 @@ variable "frontend_allowed_ips" {
     }
   ]
 }
+
+variable "postgres_storage_account_name" {
+  description = "Name of the storage account for PostgreSQL data (must be globally unique, 3-24 lowercase alphanumeric characters)"
+  type        = string
+  default     = "stfinvibepg"
+
+  validation {
+    condition     = can(regex("^[a-z0-9]{3,24}$", var.postgres_storage_account_name))
+    error_message = "Storage account name must be 3-24 characters, lowercase letters and numbers only"
+  }
+}
+
+variable "postgres_storage_quota_gb" {
+  description = "Storage quota for PostgreSQL data in GB"
+  type        = number
+  default     = 32
+
+  validation {
+    condition     = var.postgres_storage_quota_gb >= 1 && var.postgres_storage_quota_gb <= 102400
+    error_message = "Storage quota must be between 1 GB and 100 TB (102400 GB)"
+  }
+}
