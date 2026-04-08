@@ -206,7 +206,7 @@ module "backend_container_app" {
 
   # Ingress configuration
   ingress = {
-    external_enabled = true
+    external_enabled = false
     target_port      = 3000
     transport        = "auto"
     traffic_weight = [{
@@ -260,7 +260,7 @@ module "frontend_container_app" {
       env = [
         {
           name  = "VITE_API_URL"
-          value = "${module.backend_container_app.fqdn_url}/api"
+          value = "https://${module.backend_container_app.latest_revision_fqdn}/api"
         }
       ]
     }]
@@ -278,6 +278,14 @@ module "frontend_container_app" {
       latest_revision = true
       percentage      = 100
     }]
+    ip_restrictions = [
+      for ip in var.frontend_allowed_ips : {
+        name             = ip.name
+        ip_range         = ip.ip_address_range
+        action           = "Allow"
+        description      = ip.description
+      }
+    ]
   }
 
   # Registry configuration for image pull authentication
