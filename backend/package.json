@@ -38,9 +38,9 @@
     "xss-clean": "^0.1.4"
   },
   "devDependencies": {
-    "better-sqlite3": "^12.8.0",
     "jest": "^30.3.0",
     "nodemon": "^3.1.9",
+    "pg-mem": "^3.0.5",
     "supertest": "^7.2.2"
   },
   "overrides": {

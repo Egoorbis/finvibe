@@ -38,7 +38,7 @@ npm install
 
 This will install:
 - Express (web server)
-- better-sqlite3 (database)
+- pg (PostgreSQL client)
 - cors (cross-origin requests)
 - multer (file uploads)
 - And other dependencies
@@ -209,16 +209,9 @@ Both the frontend and backend support hot reload:
 
 Open your browser's Developer Tools (F12) and check the "Network" tab to see API calls and responses.
 
-### Database Location
+### Database Connection
 
-The SQLite database file is located at:
-```
-backend/database.db
-```
-
-You can open this file with tools like:
-- DB Browser for SQLite: https://sqlitebrowser.org/
-- SQLite Viewer (VS Code extension)
+The backend uses PostgreSQL. Configure connection settings with the `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` environment variables. The included `docker-compose.yml` starts a local PostgreSQL instance listening on port `5432` with defaults defined in that file.
 
 ## Next Steps
 
@@ -233,6 +226,7 @@ Now that your application is running:
 
 - Check the main README.md for more information
 - Review the code in the `backend/src` and `frontend/src` directories
+- PostgreSQL docs: https://www.postgresql.org/docs/
 - Look at the database schema in `backend/src/db/migrate.js`
 
 ## Learning Resources
@@ -252,7 +246,7 @@ Since you're learning web development, here are some helpful resources:
 - Modern JavaScript: https://javascript.info/
 
 ### SQL
-- SQLite Tutorial: https://www.sqlitetutorial.net/
+- PostgreSQL Tutorial: https://www.postgresqltutorial.com/
 - SQL Basics: https://www.w3schools.com/sql/
 
 Happy coding! 🚀

@@ -27,7 +27,7 @@ A modern, full-stack personal finance tracker to help you manage your expenses, 
 - **Node.js** - Runtime environment
 - **Express** - Web framework
 - **PostgreSQL** - Production database
-- **SQLite** - Development/testing database (better-sqlite3)
+- **PostgreSQL** - Primary database
 - **Multer** - File upload handling
 - **Express Validator** - Input validation
 

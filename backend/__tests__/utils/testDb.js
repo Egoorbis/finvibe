@@ -1,83 +1,97 @@
-import DatabaseFactory from '../../src/db/database-factory.js';
+import { newDb } from 'pg-mem';
+import PostgresAdapter from '../../src/db/postgres.js';
 
-// Create test database
+export const TEST_USER = {
+  id: 1,
+  username: 'testuser',
+  email: 'testuser@example.com',
+  password: 'hashed-password'
+};
+
+// Create PostgreSQL-compatible in-memory database for tests
 export async function setupTestDatabase() {
-  // Use in-memory SQLite database for tests
-  const db = await DatabaseFactory.createTestDatabase();
+  const pg = newDb({ autoCreateForeignKeyIndices: true });
+  const { Pool } = pg.adapters.createPg();
 
-  // Create schema (synchronous for setup)
-  db.db.exec(`
+  process.env.NODE_ENV = process.env.NODE_ENV || 'test';
+  process.env.TEST_USER_ID = String(TEST_USER.id);
+  process.env.RESEND_API_KEY = process.env.RESEND_API_KEY || 'test-resend-key';
+
+  const db = new PostgresAdapter({
+    PoolClass: Pool
+  });
+
+  await db.exec(`
     CREATE TABLE users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT NOT NULL UNIQUE,
-      email TEXT NOT NULL UNIQUE,
-      password TEXT NOT NULL,
-      email_verified INTEGER DEFAULT 0,
-      reset_token TEXT,
-      reset_token_expires DATETIME,
-      verification_token TEXT,
-      verification_token_expires DATETIME,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      id SERIAL PRIMARY KEY,
+      username VARCHAR(255) NOT NULL UNIQUE,
+      email VARCHAR(255) NOT NULL UNIQUE,
+      password VARCHAR(255) NOT NULL,
+      email_verified BOOLEAN DEFAULT FALSE,
+      verification_token VARCHAR(255),
+      verification_token_expires TIMESTAMP,
+      reset_token VARCHAR(255),
+      reset_token_expires TIMESTAMP,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE accounts (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER,
-      name TEXT NOT NULL,
-      type TEXT NOT NULL CHECK(type IN ('bank', 'credit_card')),
-      balance REAL NOT NULL DEFAULT 0,
-      currency TEXT DEFAULT 'USD',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name VARCHAR(255) NOT NULL,
+      type VARCHAR(50) NOT NULL CHECK(type IN ('bank', 'credit_card')),
+      balance NUMERIC(15, 2) DEFAULT 0,
+      currency VARCHAR(10) DEFAULT 'USD',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE categories (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER,
-      name TEXT NOT NULL,
-      type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
-      color TEXT,
-      icon TEXT,
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      name VARCHAR(255) NOT NULL,
+      type VARCHAR(50) NOT NULL CHECK(type IN ('income', 'expense')),
+      color VARCHAR(50),
+      icon VARCHAR(50),
       is_default INTEGER DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE transactions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER,
-      account_id INTEGER NOT NULL,
-      category_id INTEGER NOT NULL,
-      type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
-      amount REAL NOT NULL,
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       date DATE NOT NULL,
+      amount NUMERIC(15, 2) NOT NULL,
+      type VARCHAR(50) NOT NULL CHECK(type IN ('income', 'expense')),
       description TEXT,
+      account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE RESTRICT,
       tags TEXT,
       attachment_path TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-      FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
-      FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE budgets (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER,
-      category_id INTEGER NOT NULL,
-      amount REAL NOT NULL,
-      period TEXT NOT NULL CHECK(period IN ('monthly', 'yearly')),
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+      amount NUMERIC(15, 2) NOT NULL,
+      period VARCHAR(50) NOT NULL CHECK(period IN ('monthly', 'yearly')),
       start_date DATE NOT NULL,
       end_date DATE NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-      FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  await db.run(
+    `INSERT INTO users (username, email, password, email_verified)
+     VALUES ($1, $2, $3, $4)`,
+    [TEST_USER.username, TEST_USER.email, TEST_USER.password, true]
+  );
 
   return db;
 }
@@ -88,36 +102,44 @@ export async function teardownTestDatabase(db) {
   }
 }
 
-export function clearTestData(db) {
-  // Clear all tables synchronously for tests
-  db.db.exec('DELETE FROM transactions');
-  db.db.exec('DELETE FROM budgets');
-  db.db.exec('DELETE FROM accounts');
-  db.db.exec('DELETE FROM categories');
-  db.db.exec('DELETE FROM users');
+export async function clearTestData(db) {
+  await db.exec('TRUNCATE TABLE transactions RESTART IDENTITY CASCADE');
+  await db.exec('TRUNCATE TABLE budgets RESTART IDENTITY CASCADE');
+  await db.exec('TRUNCATE TABLE accounts RESTART IDENTITY CASCADE');
+  await db.exec('TRUNCATE TABLE categories RESTART IDENTITY CASCADE');
+  await db.exec('TRUNCATE TABLE users RESTART IDENTITY CASCADE');
+  await db.run(
+    `INSERT INTO users (username, email, password, email_verified)
+     VALUES ($1, $2, $3, $4)`,
+    [TEST_USER.username, TEST_USER.email, TEST_USER.password, true]
+  );
 }
 
-export function seedTestData(db) {
-  // Seed accounts (using direct db access for sync operation)
-  const account = db.db.prepare(`
-    INSERT INTO accounts (name, type, balance, currency)
-    VALUES (?, ?, ?, ?)
-  `).run('Test Bank', 'bank', 1000.00, 'USD');
+export async function seedTestData(db, userId = TEST_USER.id) {
+  const account = await db.run(
+    `INSERT INTO accounts (user_id, name, type, balance, currency)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id`,
+    [userId, 'Test Bank', 'bank', 1000.00, 'USD']
+  );
 
-  // Seed categories
-  const expenseCategory = db.db.prepare(`
-    INSERT INTO categories (name, type, color, icon)
-    VALUES (?, ?, ?, ?)
-  `).run('Food', 'expense', '#FF6B6B', '🍽️');
+  const expenseCategory = await db.run(
+    `INSERT INTO categories (user_id, name, type, color, icon)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id`,
+    [userId, 'Food', 'expense', '#FF6B6B', '🍽️']
+  );
 
-  const incomeCategory = db.db.prepare(`
-    INSERT INTO categories (name, type, color, icon)
-    VALUES (?, ?, ?, ?)
-  `).run('Salary', 'income', '#26DE81', '💰');
+  const incomeCategory = await db.run(
+    `INSERT INTO categories (user_id, name, type, color, icon)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id`,
+    [userId, 'Salary', 'income', '#26DE81', '💰']
+  );
 
   return {
-    accountId: account.lastInsertRowid,
-    expenseCategoryId: expenseCategory.lastInsertRowid,
-    incomeCategoryId: incomeCategory.lastInsertRowid
+    accountId: account.rows[0]?.id,
+    expenseCategoryId: expenseCategory.rows[0]?.id,
+    incomeCategoryId: incomeCategory.rows[0]?.id
   };
 }
