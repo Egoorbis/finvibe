@@ -47,8 +47,8 @@ const Register = () => {
       return false;
     }
 
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters long');
       return false;
     }
 
@@ -131,7 +131,7 @@ const Register = () => {
               name="password"
               value={formData.password}
               onChange={handleChange}
-              placeholder="Choose a password (min 6 characters)"
+              placeholder="Choose a password (min 8 characters)"
               autoComplete="new-password"
             />
           </div>
