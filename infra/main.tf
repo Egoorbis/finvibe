@@ -192,6 +192,10 @@ module "backend_container_app" {
         {
           name  = "RESEND_FROM_EMAIL"
           value = var.resend_from_email
+        },
+        {
+          name  = "JWT_SECRET"
+          value = var.jwt_secret
         }
       ]
     }]

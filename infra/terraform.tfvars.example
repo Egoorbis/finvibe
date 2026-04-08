@@ -34,6 +34,10 @@ postgres_db_name   = "finvibe"
 postgres_user      = "finvibe_user"
 postgres_password  = "CHANGE_ME_SECURE_PASSWORD"
 
+# JWT secret for signing authentication tokens (minimum 32 characters)
+# Generate with: openssl rand -base64 32
+jwt_secret = "CHANGE_ME_SECURE_JWT_SECRET_MIN_32_CHARS"
+
 # Tags for all resources
 tags = {
   Environment = "production"

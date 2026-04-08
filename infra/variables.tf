@@ -107,3 +107,9 @@ variable "postgres_password" {
   type        = string
   sensitive   = true
 }
+
+variable "jwt_secret" {
+  description = "Secret key for signing JWT tokens (minimum 32 characters)"
+  type        = string
+  sensitive   = true
+}
