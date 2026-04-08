@@ -115,7 +115,7 @@ variable "jwt_secret" {
 }
 
 variable "frontend_allowed_ips" {
-  description = "List of IP addresses or CIDR ranges allowed to access the frontend"
+  description = "List of IPv4 addresses or CIDR ranges allowed to access the frontend (IPv6 not supported by Azure Container Apps)"
   type = list(object({
     name             = string
     ip_address_range = string
@@ -126,11 +126,6 @@ variable "frontend_allowed_ips" {
       name             = "allowed-ip-1"
       ip_address_range = "82.220.81.212/32"
       description      = "Allowed IP address 1"
-    },
-    {
-      name             = "allowed-ip-2"
-      ip_address_range = "2001:4860:7:172f::f8/128"
-      description      = "Allowed IPv6 address 2"
     }
   ]
 }
