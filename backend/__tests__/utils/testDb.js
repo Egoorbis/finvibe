@@ -7,6 +7,20 @@ export async function setupTestDatabase() {
 
   // Create schema (synchronous for setup)
   db.db.exec(`
+    CREATE TABLE users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT NOT NULL UNIQUE,
+      email TEXT NOT NULL UNIQUE,
+      password TEXT NOT NULL,
+      email_verified INTEGER DEFAULT 0,
+      reset_token TEXT,
+      reset_token_expires DATETIME,
+      verification_token TEXT,
+      verification_token_expires DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE accounts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER,
@@ -15,7 +29,8 @@ export async function setupTestDatabase() {
       balance REAL NOT NULL DEFAULT 0,
       currency TEXT DEFAULT 'USD',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
     CREATE TABLE categories (
@@ -27,7 +42,8 @@ export async function setupTestDatabase() {
       icon TEXT,
       is_default INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
     CREATE TABLE transactions (
@@ -43,6 +59,7 @@ export async function setupTestDatabase() {
       attachment_path TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
       FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
       FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT
     );
@@ -57,6 +74,7 @@ export async function setupTestDatabase() {
       end_date DATE NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
       FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
     );
   `);
@@ -76,6 +94,7 @@ export function clearTestData(db) {
   db.db.exec('DELETE FROM budgets');
   db.db.exec('DELETE FROM accounts');
   db.db.exec('DELETE FROM categories');
+  db.db.exec('DELETE FROM users');
 }
 
 export function seedTestData(db) {
