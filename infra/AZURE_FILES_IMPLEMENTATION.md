@@ -207,6 +207,33 @@ az containerapp exec \
   --command "psql -U finvibe_user -d finvibe"
 ```
 
+## Troubleshooting: Postgres fails to init on Azure Files (chmod / permission denied)
+
+**Symptoms (container logs):**
+```
+chmod: /var/lib/postgresql/data/pgdata: Operation not permitted
+initdb: error: could not change permissions of directory "/var/lib/postgresql/data/pgdata": Operation not permitted
+```
+
+**Why it happens:** Azure Files (SMB) does not allow arbitrary chmod/chown. Postgres `initdb` expects `PGDATA` to be owned by the postgres user with 0700 perms; if the mount is pre-created with different ownership/perms, initdb fails.
+
+**Fix steps:**
+1) Align `PGDATA` with the mount root  
+   - Use `PGDATA=/var/lib/postgresql/data` (the mount path) or ensure the subdirectory is created by Postgres after mount. Avoid pre-creating `/var/lib/postgresql/data/pgdata` with wrong perms.
+
+2) Match mount ownership to the postgres user  
+   - Run the container as UID/GID 999 (default postgres image).  
+   - Set Azure Files mount options to `uid=999,gid=999,dir_mode=0700,file_mode=0600,cache=strict` (Container Apps supports `mountOptions` on AzureFile volumes).
+
+3) Start from a clean share  
+   - If a previous attempt wrote files with wrong ownership, recreate or empty the `postgres-data` share, then redeploy.
+
+4) Validate after redeploy  
+   - Logs should no longer show chmod/initdb errors.  
+   - From an exec session, `touch /var/lib/postgresql/data/testfile` should succeed; Postgres should start normally.
+
+**Recommendation:** For higher IOPS and simpler permissions, consider Azure Disks for Postgres data. If staying on Azure Files, keep `cache=strict`, single replica, and consistent mount/PGDATA settings across revisions.
+
 ### Automated Backup
 
 You can use Azure Backup for Files or set up a scheduled job:
