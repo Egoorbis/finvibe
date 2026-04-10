@@ -34,7 +34,7 @@ A modern, full-stack personal finance tracker to help you manage your expenses, 
 ### DevOps
 - **Docker** - Containerization
 - **Docker Compose** - Multi-container orchestration
-- **Nginx** - Production web server
+- **Nginx** - Production web server and API reverse proxy
 
 ## Deployment Options
 
@@ -158,7 +158,8 @@ http://localhost:5173
 - **[Getting Started](GETTING_STARTED.md)** - Step-by-step local development setup
 - **[Windows Setup](WINDOWS_SETUP.md)** - Windows-specific installation instructions
 
-### Configuration
+### Architecture & Configuration
+- **[Architecture Overview](ARCHITECTURE.md)** - System design, components, and data flow
 - **[Environment Variables](ENVIRONMENT.md)** - Environment configuration reference
 - **[Terraform Infrastructure](infra/README.md)** - Infrastructure as Code documentation
 
@@ -185,10 +186,22 @@ finvibe/
 │   │   ├── utils/           # Helper functions
 │   │   ├── App.jsx          # Main App component
 │   │   └── main.jsx         # Entry point
+│   ├── nginx.conf.template  # Nginx reverse proxy config
 │   ├── public/              # Static assets
 │   └── package.json
 └── README.md
 ```
+
+## Architecture
+
+### API Communication
+The frontend communicates with the backend through an **nginx reverse proxy pattern**:
+
+- **Development**: Vite dev server proxies `/api` requests to `http://localhost:3000`
+- **Production**: Nginx proxies `/api` requests to the backend container
+- **Configuration**: The `BACKEND_URL` environment variable specifies the backend location
+
+This approach allows the frontend to use relative URLs (`/api/...`) that work seamlessly across all deployment environments without requiring different builds.
 
 ## Development Guide
 

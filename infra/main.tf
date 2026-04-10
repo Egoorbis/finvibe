@@ -200,6 +200,10 @@ module "backend_container_app" {
         {
           name  = "JWT_SECRET"
           value = var.jwt_secret
+        },
+        {
+          name  = "CORS_ORIGIN"
+          value = "https://${var.frontend_app_name}.${module.container_apps_environment.default_domain}"
         }
       ]
     }]
@@ -263,8 +267,8 @@ module "frontend_container_app" {
 
       env = [
         {
-          name  = "VITE_API_URL"
-          value = "https://${module.backend_container_app.latest_revision_fqdn}/api"
+          name  = "BACKEND_URL"
+          value = "http://${module.backend_container_app.latest_revision_fqdn}"
         }
       ]
     }]
