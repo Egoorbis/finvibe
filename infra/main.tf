@@ -200,6 +200,10 @@ module "backend_container_app" {
         {
           name  = "JWT_SECRET"
           value = var.jwt_secret
+        },
+        {
+          name  = "CORS_ORIGIN"
+          value = var.cors_allowed_origin
         }
       ]
     }]
@@ -306,5 +310,3 @@ module "frontend_container_app" {
     module.avm-res-managedidentity-userassignedidentity
   ]
 }
-
-

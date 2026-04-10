@@ -1,6 +1,10 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const runtimeApiUrl =
+  typeof window !== 'undefined' && window.__ENV ? window.__ENV.VITE_API_URL : undefined;
+
+// Prefer runtime-injected API URL (env.js), then build-time Vite env, then relative /api (for nginx proxy)
+const API_URL = runtimeApiUrl || import.meta.env.VITE_API_URL || '/api';
 
 const api = axios.create({
   baseURL: API_URL,

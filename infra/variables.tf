@@ -114,6 +114,12 @@ variable "jwt_secret" {
   sensitive   = true
 }
 
+variable "cors_allowed_origin" {
+  description = "Allowed origin for backend CORS configuration"
+  type        = string
+  default     = "*"
+}
+
 variable "frontend_allowed_ips" {
   description = "List of IPv4 addresses or CIDR ranges allowed to access the frontend (IPv6 not supported by Azure Container Apps)"
   type = list(object({
