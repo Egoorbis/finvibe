@@ -2,6 +2,24 @@
 
 This guide provides comprehensive instructions for setting up, running, and verifying the FinVibe application using Docker.
 
+## Architecture Overview
+
+FinVibe uses a **three-tier containerized architecture**:
+
+1. **PostgreSQL Container** - Database layer
+2. **Backend Container** - Node.js/Express API server
+3. **Frontend Container** - React app served by nginx with reverse proxy
+
+### API Communication Flow
+```
+Browser → Frontend (nginx:80) → /api → Backend (Node.js:3000) → PostgreSQL (5432)
+```
+
+The frontend uses an **nginx reverse proxy** to forward API requests:
+- All API calls use relative URLs (`/api/...`)
+- Nginx proxies these to the backend via the `BACKEND_URL` environment variable
+- This pattern works seamlessly across all environments (local, Docker, Azure)
+
 ## Table of Contents
 
 1. [Prerequisites](#prerequisites)
@@ -89,6 +107,8 @@ docker-compose exec backend npm run seed
    # CORS Configuration
    CORS_ORIGIN=http://localhost
    ```
+
+   **Note:** The `BACKEND_URL` environment variable is automatically configured in `docker-compose.yml` to point to `http://backend:3000`. This tells the frontend nginx proxy where to forward API requests.
 
 3. **Security Note:** For production, **always change the default password**:
    ```bash
@@ -462,19 +482,29 @@ docker-compose exec postgres pg_isready -U finvibe_user
 
 ### Frontend Cannot Connect to Backend
 
-1. **Check CORS configuration** in `.env`:
+**Note:** As of the latest update, the frontend uses an nginx reverse proxy pattern to communicate with the backend. API requests use relative URLs (`/api`) and nginx forwards them to the backend.
+
+1. **Verify nginx proxy configuration:**
+   The frontend container should have the `BACKEND_URL` environment variable set in `docker-compose.yml`:
+   ```yaml
+   frontend:
+     environment:
+       BACKEND_URL: http://backend:3000
+   ```
+
+2. **Check CORS configuration** in `.env`:
    ```env
    CORS_ORIGIN=http://localhost
    ```
 
-2. **Verify backend is accessible:**
+3. **Verify backend is accessible:**
    ```bash
    curl http://localhost:3000/health
    ```
 
-3. **Check browser console** for CORS errors
+4. **Check browser console** for errors
 
-4. **Rebuild frontend** with correct API URL:
+5. **Rebuild frontend** if configuration changed:
    ```bash
    docker-compose up -d --build frontend
    ```

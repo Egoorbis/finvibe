@@ -11,8 +11,20 @@ FinVibe is deployed to Azure using infrastructure-as-code with Terraform. The de
 The deployment creates:
 - **Azure Container Registry (ACR)** - Stores Docker images
 - **Azure Container Apps Environment** - Provides the runtime environment
-- **Backend Container App** - Node.js/Express API
-- **Frontend Container App** - React/Vite application
+- **PostgreSQL Container App** - Database with Azure Files persistent storage
+- **Backend Container App** - Node.js/Express API (internal ingress only)
+- **Frontend Container App** - React/Vite app with nginx reverse proxy (external ingress)
+
+### Network Architecture
+```
+Internet → Frontend (nginx) → /api → Backend (internal) → PostgreSQL (internal)
+```
+
+The frontend uses an **nginx reverse proxy** configured at runtime:
+- Frontend makes API calls to relative URLs (`/api/...`)
+- Nginx proxies these requests to the backend's internal FQDN
+- The `BACKEND_URL` environment variable is set by Terraform to the backend's Container App URL
+- Backend is only accessible internally (no external ingress)
 
 All infrastructure is defined in Terraform configuration files in the `infra/` directory.
 
@@ -345,6 +357,29 @@ All infrastructure is defined using Terraform with Azure Verified Modules (AVM):
 3. **Container Apps** - [avm-res-app-containerapp](https://registry.terraform.io/modules/Azure/avm-res-app-containerapp/azurerm/latest)
 
 These modules follow Microsoft's best practices and are production-ready.
+
+### Container Configuration
+
+The Terraform configuration automatically sets up the required environment variables for each container:
+
+**Backend Container:**
+- `NODE_ENV` - Set to "production"
+- `PORT` - Internal port (3000)
+- `DB_HOST` - PostgreSQL container FQDN
+- `DB_*` - Database credentials from variables
+- `JWT_SECRET` - From Terraform variables
+- `CORS_ORIGIN` - Automatically set to the frontend URL
+
+**Frontend Container:**
+- `BACKEND_URL` - Automatically set to the backend's internal FQDN
+  - This configures the nginx reverse proxy to forward `/api` requests to the backend
+  - Example: `http://finvibe-backend.internal.xxx.azurecontainerapps.io`
+
+**PostgreSQL Container:**
+- `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` - From Terraform variables
+- Persistent storage via Azure Files
+
+The frontend nginx configuration uses runtime template substitution to inject the `BACKEND_URL`, allowing it to proxy API requests to the backend without hardcoding URLs at build time.
 
 ## Monitoring and Logs
 
