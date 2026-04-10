@@ -92,7 +92,7 @@ module "postgres_container_app" {
         },
         {
           name  = "PGDATA"
-          value = "/var/lib/postgresql/data/pgdata"
+          value = "/var/lib/postgresql/data"
         }
       ]
 
@@ -310,4 +310,3 @@ module "frontend_container_app" {
     module.avm-res-managedidentity-userassignedidentity
   ]
 }
-

@@ -144,7 +144,7 @@ module "postgres_container_app" {
         },
         {
           name  = "PGDATA"
-          value = "/var/lib/postgresql/data/pgdata"
+          value = "/var/lib/postgresql/data"
         }
       ]
 
@@ -305,7 +305,7 @@ spec:
               name: postgres-secret
               key: POSTGRES_PASSWORD
         - name: PGDATA
-          value: /var/lib/postgresql/data/pgdata
+          value: /var/lib/postgresql/data
         volumeMounts:
         - name: postgres-storage
           mountPath: /var/lib/postgresql/data
@@ -378,7 +378,7 @@ services:
       POSTGRES_DB: finvibe
       POSTGRES_USER: finvibe
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
-      PGDATA: /var/lib/postgresql/data/pgdata
+      PGDATA: /var/lib/postgresql/data
     volumes:
       - postgres-data:/var/lib/postgresql/data
     ports:
