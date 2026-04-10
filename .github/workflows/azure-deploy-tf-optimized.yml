@@ -248,9 +248,19 @@ jobs:
       - name: Terraform Output
         id: outputs
         run: |
-          echo "backend_url=$(terraform output -raw deployment_summary | jq -r '.backend_url')" >> $GITHUB_OUTPUT
-          echo "frontend_url=$(terraform output -raw deployment_summary | jq -r '.frontend_url')" >> $GITHUB_OUTPUT
-          terraform output -json deployment_summary > deployment_summary.json
+          summary_json=$(terraform output -json deployment_summary)
+
+          backend_url=$(echo "$summary_json" | jq -r '.value.backend_url // empty')
+          frontend_url=$(echo "$summary_json" | jq -r '.value.frontend_url // empty')
+
+          if [ -z "$backend_url" ] || [ -z "$frontend_url" ]; then
+            echo "Deployment outputs are missing backend or frontend URLs" >&2
+            exit 1
+          fi
+
+          echo "backend_url=$backend_url" >> $GITHUB_OUTPUT
+          echo "frontend_url=$frontend_url" >> $GITHUB_OUTPUT
+          echo "$summary_json" | jq -r '.value' > deployment_summary.json
 
       - name: Upload Deployment Summary
         uses: actions/upload-artifact@v4
@@ -281,6 +291,11 @@ jobs:
           RETRY_COUNT=0
           BACKEND_URL="${{ needs.terraform-apply.outputs.backend_url }}"
 
+          if [ -z "$BACKEND_URL" ]; then
+            echo "❌ Backend URL output is empty"
+            exit 1
+          fi
+
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             echo "Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES: Checking $BACKEND_URL/health"
 
@@ -304,6 +319,11 @@ jobs:
           MAX_RETRIES=5
           RETRY_COUNT=0
           FRONTEND_URL="${{ needs.terraform-apply.outputs.frontend_url }}"
+
+          if [ -z "$FRONTEND_URL" ]; then
+            echo "❌ Frontend URL output is empty"
+            exit 1
+          fi
 
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             echo "Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES: Checking $FRONTEND_URL"
