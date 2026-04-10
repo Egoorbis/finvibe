@@ -214,7 +214,7 @@ module "backend_container_app" {
 
   # Ingress configuration
   ingress = {
-    external_enabled = false
+    external_enabled = true
     target_port      = 3000
     transport        = "auto"
     traffic_weight = [{
