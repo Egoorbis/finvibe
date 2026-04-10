@@ -42,11 +42,14 @@ export const User = {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Generate username from email if not provided
+    const finalUsername = username || email.split('@')[0];
+
     const result = await db.run(
       `INSERT INTO users (username, email, password)
        VALUES ($1, $2, $3)
        RETURNING id`,
-      [username, email, hashedPassword]
+      [finalUsername, email, hashedPassword]
     );
 
     const id = result.lastInsertRowid || result.rows[0]?.id;

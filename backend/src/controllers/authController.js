@@ -8,9 +8,9 @@ export const register = async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
-    // Validation
-    if (!username || !email || !password) {
-      return res.status(400).json({ error: 'Username, email, and password are required' });
+    // Validation - only email and password are required
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
     }
 
     // Password validation - minimum 8 characters for better security
@@ -24,20 +24,22 @@ export const register = async (req, res) => {
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
-    // Username validation (alphanumeric and underscores only)
-    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
-    if (!usernameRegex.test(username)) {
-      return res.status(400).json({ error: 'Username must be 3-20 characters (letters, numbers, underscores only)' });
+    // Username validation (optional, only if provided)
+    if (username) {
+      const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+      if (!usernameRegex.test(username)) {
+        return res.status(400).json({ error: 'Username must be 3-20 characters (letters, numbers, underscores only)' });
+      }
+
+      // Check if username already exists
+      if (await User.usernameExists(username)) {
+        return res.status(409).json({ error: 'Username already taken' });
+      }
     }
 
     // Check if email already exists
     if (await User.emailExists(email)) {
       return res.status(409).json({ error: 'Email already registered' });
-    }
-
-    // Check if username already exists
-    if (await User.usernameExists(username)) {
-      return res.status(409).json({ error: 'Username already taken' });
     }
 
     // Create user
