@@ -34,6 +34,7 @@ const __dirname = dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '0.0.0.0';
 
 // Security Middleware (apply first)
 app.use(securityHeaders);
@@ -109,10 +110,11 @@ app.use((req, res) => {
 });
 
 // Start server
-app.listen(PORT, async () => {
-  console.log(`🚀 FinVibe API server is running on http://localhost:${PORT}`);
-  console.log(`📊 API Documentation: http://localhost:${PORT}/`);
-  console.log(`💚 Health check: http://localhost:${PORT}/health`);
+app.listen(PORT, HOST, async () => {
+  const baseUrl = `http://${HOST}:${PORT}`;
+  console.log(`🚀 FinVibe API server is running on ${baseUrl}`);
+  console.log(`📊 API Documentation: ${baseUrl}/`);
+  console.log(`💚 Health check: ${baseUrl}/health`);
   console.log(`🔒 Security: Helmet, Rate Limiting, Input Sanitization enabled`);
 
   // Verify email service configuration
