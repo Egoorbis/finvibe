@@ -268,7 +268,7 @@ module "frontend_container_app" {
       env = [
         {
           name  = "BACKEND_URL"
-          value = "https://${var.backend_app_name}.${module.container_apps_environment.default_domain}"
+          value = "http://${var.backend_app_name}.${module.container_apps_environment.default_domain}"
         }
       ]
     }]
