@@ -29,7 +29,7 @@ ENV BACKEND_URL=http://backend:3000
 
 # Create non-root user for nginx
 RUN touch /var/run/nginx.pid && \
-    chown -R nginx:nginx /var/run/nginx.pid /var/cache/nginx /etc/nginx/templates
+    chown -R nginx:nginx /var/run/nginx.pid /var/cache/nginx /etc/nginx/templates /etc/nginx/conf.d /var/log/nginx
 
 # Switch to non-root user
 USER nginx
