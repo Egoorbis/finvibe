@@ -3,6 +3,32 @@ import { generateToken } from '../middleware/auth.js';
 import { sendPasswordResetEmail, sendVerificationEmail, sendWelcomeEmail } from '../services/emailService.js';
 import crypto from 'crypto';
 
+const isValidEmail = (email) => {
+  if (typeof email !== 'string') return false;
+
+  const trimmed = email.trim();
+  if (!trimmed || trimmed.length > 254) return false;
+
+  const atIndex = trimmed.indexOf('@');
+  if (atIndex <= 0 || atIndex !== trimmed.lastIndexOf('@')) return false;
+
+  const local = trimmed.slice(0, atIndex);
+  const domain = trimmed.slice(atIndex + 1);
+  if (!local || !domain || domain.length > 253) return false;
+
+  const domainParts = domain.split('.');
+  if (domainParts.length < 2) return false;
+
+  return domainParts.every(
+    (part) =>
+      part.length > 0 &&
+      part.length <= 63 &&
+      !part.startsWith('-') &&
+      !part.endsWith('-') &&
+      /^[a-zA-Z0-9-]+$/.test(part)
+  );
+};
+
 // Register a new user
 export const register = async (req, res) => {
   try {
@@ -19,8 +45,7 @@ export const register = async (req, res) => {
     }
 
     // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!isValidEmail(email)) {
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
@@ -127,8 +152,7 @@ export const updateProfile = async (req, res) => {
 
     // Check if new email already exists (if changing email)
     if (email && email !== currentUser.email) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
+      if (!isValidEmail(email)) {
         return res.status(400).json({ error: 'Invalid email format' });
       }
 
