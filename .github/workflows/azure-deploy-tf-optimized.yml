@@ -250,8 +250,8 @@ jobs:
         run: |
           summary_json=$(terraform output -json deployment_summary)
 
-          backend_url=$(echo "$summary_json" | jq -r '.value.backend_url // empty')
-          frontend_url=$(echo "$summary_json" | jq -r '.value.frontend_url // empty')
+          backend_url=$(echo "$summary_json" | jq -r '.backend_url // empty')
+          frontend_url=$(echo "$summary_json" | jq -r '.frontend_url // empty')
 
           if [ -z "$backend_url" ] || [ -z "$frontend_url" ]; then
             echo "Deployment outputs are missing backend or frontend URLs" >&2
@@ -260,7 +260,7 @@ jobs:
 
           echo "backend_url=$backend_url" >> $GITHUB_OUTPUT
           echo "frontend_url=$frontend_url" >> $GITHUB_OUTPUT
-          echo "$summary_json" | jq -r '.value' > deployment_summary.json
+          echo "$summary_json" | jq -r '.' > deployment_summary.json
 
       - name: Upload Deployment Summary
         uses: actions/upload-artifact@v4
