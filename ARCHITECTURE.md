@@ -126,8 +126,8 @@ frontend:
 Internet
     ↓ HTTPS
 Frontend Container App (public)
-    ↓ /api → http://backend.internal.azurecontainerapps.io
-Backend Container App (internal only)
+    ↓ /api → https://<backend-app>.<env-default-domain>
+Backend Container App (public ingress)
     ↓
 PostgreSQL Container App (internal only)
 ```
@@ -138,7 +138,7 @@ module "frontend_container_app" {
   ...
   env = [{
     name  = "BACKEND_URL"
-    value = "http://${module.backend_container_app.latest_revision_fqdn}"
+    value = "https://${var.backend_app_name}.${module.container_apps_environment.default_domain}"
   }]
 }
 ```
@@ -152,6 +152,7 @@ The frontend nginx configuration uses **template substitution**:
 3. Runtime: Nginx serves the app and proxies `/api` requests to the backend
 
 This allows the same Docker image to work in different environments by just changing the `BACKEND_URL` environment variable.
+Terraform sets `BACKEND_URL` to the stable backend app FQDN so Nginx keeps routing correctly across backend revisions.
 
 ## Security Architecture
 

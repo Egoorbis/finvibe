@@ -268,7 +268,7 @@ module "frontend_container_app" {
       env = [
         {
           name  = "BACKEND_URL"
-          value = "http://${module.backend_container_app.latest_revision_fqdn}"
+          value = "https://${var.backend_app_name}.${module.container_apps_environment.default_domain}"
         }
       ]
     }]
@@ -288,10 +288,10 @@ module "frontend_container_app" {
     }]
     ip_restrictions = [
       for ip in var.frontend_allowed_ips : {
-        name             = ip.name
-        ip_range         = ip.ip_address_range
-        action           = "Allow"
-        description      = ip.description
+        name        = ip.name
+        ip_range    = ip.ip_address_range
+        action      = "Allow"
+        description = ip.description
       }
     ]
   }
@@ -310,5 +310,4 @@ module "frontend_container_app" {
     module.avm-res-managedidentity-userassignedidentity
   ]
 }
-
 
