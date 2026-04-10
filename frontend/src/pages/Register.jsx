@@ -8,7 +8,6 @@ const Register = () => {
   const { register, error, setError } = useAuth();
 
   const [formData, setFormData] = useState({
-    username: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -26,18 +25,8 @@ const Register = () => {
   };
 
   const validateForm = () => {
-    if (!formData.username || !formData.email || !formData.password || !formData.confirmPassword) {
+    if (!formData.email || !formData.password || !formData.confirmPassword) {
       setError('Please fill in all fields');
-      return false;
-    }
-
-    if (formData.username.length < 3 || formData.username.length > 20) {
-      setError('Username must be between 3 and 20 characters');
-      return false;
-    }
-
-    if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
-      setError('Username can only contain letters, numbers, and underscores');
       return false;
     }
 
@@ -97,20 +86,6 @@ const Register = () => {
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label htmlFor="username">Username</label>
-            <input
-              type="text"
-              id="username"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              placeholder="Choose a username (3-20 characters)"
-              autoComplete="username"
-              autoFocus
-            />
-          </div>
-
-          <div className="form-group">
             <label htmlFor="email">Email</label>
             <input
               type="email"
@@ -120,6 +95,7 @@ const Register = () => {
               onChange={handleChange}
               placeholder="Enter your email address"
               autoComplete="email"
+              autoFocus
             />
           </div>
 
