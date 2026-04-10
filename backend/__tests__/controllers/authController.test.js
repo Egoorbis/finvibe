@@ -34,7 +34,26 @@ beforeEach(async () => {
 
 describe('Auth Controller', () => {
   describe('POST /api/auth/register', () => {
-    it('should register a new user with valid 8+ character password', async () => {
+    it('should register a new user without username (auto-generated from email)', async () => {
+      const userData = {
+        email: 'test@example.com',
+        password: 'password123' // 12 characters - valid
+      };
+
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send(userData);
+
+      expect(response.status).toBe(201);
+      expect(response.body.message).toBe('User registered successfully');
+      expect(response.body.user).toBeDefined();
+      expect(response.body.user.username).toBe('test'); // Auto-generated from email
+      expect(response.body.user.email).toBe('test@example.com');
+      expect(response.body.user.password).toBeUndefined();
+      expect(response.body.token).toBeDefined();
+    });
+
+    it('should register a new user with valid 8+ character password and username', async () => {
       const userData = {
         username: 'testuser',
         email: 'test@example.com',
@@ -54,9 +73,8 @@ describe('Auth Controller', () => {
       expect(response.body.token).toBeDefined();
     });
 
-    it('should register with exactly 8 character password', async () => {
+    it('should register with exactly 8 character password without username', async () => {
       const userData = {
-        username: 'testuser',
         email: 'test@example.com',
         password: 'pass1234' // Exactly 8 characters
       };
@@ -71,7 +89,6 @@ describe('Auth Controller', () => {
 
     it('should reject registration with 7 character password', async () => {
       const userData = {
-        username: 'testuser',
         email: 'test@example.com',
         password: 'pass123' // Only 7 characters - invalid
       };
@@ -86,7 +103,6 @@ describe('Auth Controller', () => {
 
     it('should reject registration with 6 character password', async () => {
       const userData = {
-        username: 'testuser',
         email: 'test@example.com',
         password: 'pass12' // Only 6 characters - invalid
       };
@@ -99,23 +115,8 @@ describe('Auth Controller', () => {
       expect(response.body.error).toBe('Password must be at least 8 characters long');
     });
 
-    it('should reject registration without username', async () => {
-      const userData = {
-        email: 'test@example.com',
-        password: 'password123'
-      };
-
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send(userData);
-
-      expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Username, email, and password are required');
-    });
-
     it('should reject registration without email', async () => {
       const userData = {
-        username: 'testuser',
         password: 'password123'
       };
 
@@ -124,12 +125,11 @@ describe('Auth Controller', () => {
         .send(userData);
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Username, email, and password are required');
+      expect(response.body.error).toBe('Email and password are required');
     });
 
     it('should reject registration without password', async () => {
       const userData = {
-        username: 'testuser',
         email: 'test@example.com'
       };
 
@@ -138,12 +138,11 @@ describe('Auth Controller', () => {
         .send(userData);
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Username, email, and password are required');
+      expect(response.body.error).toBe('Email and password are required');
     });
 
     it('should reject registration with invalid email format', async () => {
       const userData = {
-        username: 'testuser',
         email: 'invalid-email',
         password: 'password123'
       };

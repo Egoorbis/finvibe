@@ -34,7 +34,6 @@ describe('Register Component', () => {
     renderRegister();
 
     expect(screen.getByText('Create Account')).toBeInTheDocument();
-    expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/confirm password/i)).toBeInTheDocument();
@@ -59,84 +58,9 @@ describe('Register Component', () => {
     });
   });
 
-  it('should validate username length (minimum 3 characters)', async () => {
-    renderRegister();
-
-    fireEvent.change(screen.getByLabelText(/username/i), {
-      target: { value: 'ab' }, // Only 2 characters
-    });
-    fireEvent.change(screen.getByLabelText(/email/i), {
-      target: { value: 'test@example.com' },
-    });
-    fireEvent.change(screen.getByLabelText(/^password$/i), {
-      target: { value: 'password123' },
-    });
-    fireEvent.change(screen.getByLabelText(/confirm password/i), {
-      target: { value: 'password123' },
-    });
-
-    const submitButton = screen.getByRole('button', { name: /sign up/i });
-    fireEvent.click(submitButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/username must be between 3 and 20 characters/i)).toBeInTheDocument();
-    });
-  });
-
-  it('should validate username length (maximum 20 characters)', async () => {
-    renderRegister();
-
-    fireEvent.change(screen.getByLabelText(/username/i), {
-      target: { value: 'a'.repeat(21) }, // 21 characters
-    });
-    fireEvent.change(screen.getByLabelText(/email/i), {
-      target: { value: 'test@example.com' },
-    });
-    fireEvent.change(screen.getByLabelText(/^password$/i), {
-      target: { value: 'password123' },
-    });
-    fireEvent.change(screen.getByLabelText(/confirm password/i), {
-      target: { value: 'password123' },
-    });
-
-    const submitButton = screen.getByRole('button', { name: /sign up/i });
-    fireEvent.click(submitButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/username must be between 3 and 20 characters/i)).toBeInTheDocument();
-    });
-  });
-
-  it('should validate username format (alphanumeric and underscores only)', async () => {
-    renderRegister();
-
-    fireEvent.change(screen.getByLabelText(/username/i), {
-      target: { value: 'test-user!' }, // Contains invalid characters
-    });
-    fireEvent.change(screen.getByLabelText(/email/i), {
-      target: { value: 'test@example.com' },
-    });
-    fireEvent.change(screen.getByLabelText(/^password$/i), {
-      target: { value: 'password123' },
-    });
-    fireEvent.change(screen.getByLabelText(/confirm password/i), {
-      target: { value: 'password123' },
-    });
-
-    const submitButton = screen.getByRole('button', { name: /sign up/i });
-    fireEvent.click(submitButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/username can only contain letters, numbers, and underscores/i)).toBeInTheDocument();
-    });
-  });
-
   it('should validate email format', async () => {
     renderRegister();
 
-    fireEvent.change(screen.getByLabelText(/username/i), {
-      target: { value: 'testuser' },
-    });
     fireEvent.change(screen.getByLabelText(/email/i), {
       target: { value: 'invalid-email' }, // Invalid email format
     });
