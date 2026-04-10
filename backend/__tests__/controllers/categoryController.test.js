@@ -20,12 +20,12 @@ beforeAll(async () => {
   app = appModule.default;
 });
 
-afterAll(() => {
-  teardownTestDatabase(testDb);
+afterAll(async () => {
+  await teardownTestDatabase(testDb);
 });
 
 beforeEach(async () => {
-  clearTestData(testDb);
+  await clearTestData(testDb);
 });
 
 describe('Category Controller', () => {

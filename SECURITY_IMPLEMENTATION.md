@@ -327,12 +327,15 @@ Azure Container     Azure Container      Azure Container
 ## Environment Variables Checklist
 
 ### Required for Development
-- ✅ `DB_TYPE=sqlite`
+- ✅ `DB_HOST`
+- ✅ `DB_PORT`
+- ✅ `DB_NAME`
+- ✅ `DB_USER`
+- ✅ `DB_PASSWORD`
 - ✅ `JWT_SECRET`
 - ✅ `CORS_ORIGIN`
 
 ### Required for Production
-- ✅ `DB_TYPE=postgres`
 - ✅ `DB_HOST`
 - ✅ `DB_PORT`
 - ✅ `DB_NAME`

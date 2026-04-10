@@ -23,7 +23,6 @@ Used when running the application with Docker Compose.
 | `NODE_ENV` | Application environment (development/production) | `production` | No |
 | `BACKEND_PORT` | Port for backend API | `3000` | No |
 | `FRONTEND_PORT` | Port for frontend | `80` | No |
-| `DB_TYPE` | Database type (`postgres` or `sqlite`) | `postgres` | No |
 | `DB_HOST` | PostgreSQL host | `postgres` | No |
 | `DB_PORT` | PostgreSQL port | `5432` | No |
 | `DB_NAME` | PostgreSQL database name | `finvibe` | No |
@@ -37,32 +36,18 @@ Used when running the backend directly (without Docker).
 
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
-| `DB_TYPE` | Database type (`postgres` or `sqlite`) | `sqlite` | No |
-| `DB_HOST` | PostgreSQL host (only for postgres) | `localhost` | If DB_TYPE=postgres |
-| `DB_PORT` | PostgreSQL port (only for postgres) | `5432` | If DB_TYPE=postgres |
-| `DB_NAME` | PostgreSQL database name (only for postgres) | `finvibe` | If DB_TYPE=postgres |
-| `DB_USER` | PostgreSQL username (only for postgres) | `finvibe_user` | If DB_TYPE=postgres |
-| `DB_PASSWORD` | PostgreSQL password (only for postgres) | - | If DB_TYPE=postgres |
+| `DB_HOST` | PostgreSQL host | `localhost` | No |
+| `DB_PORT` | PostgreSQL port | `5432` | No |
+| `DB_NAME` | PostgreSQL database name | `finvibe` | No |
+| `DB_USER` | PostgreSQL username | `finvibe_user` | No |
+| `DB_PASSWORD` | PostgreSQL password | - | Yes (production) |
 | `CORS_ORIGIN` | Allowed CORS origins (comma-separated) | `http://localhost:5173` | No |
 
 ## Database Configuration
 
-### SQLite (Development/Testing)
-
-SQLite is used by default for development and testing. No additional configuration is required.
+### PostgreSQL
 
 ```env
-DB_TYPE=sqlite
-```
-
-The database file will be created at `backend/database.db`.
-
-### PostgreSQL (Production)
-
-For production deployments, PostgreSQL is recommended:
-
-```env
-DB_TYPE=postgres
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=finvibe
@@ -96,14 +81,17 @@ CORS_ORIGIN=*
 ### Development
 ```env
 NODE_ENV=development
-DB_TYPE=sqlite
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=finvibe
+DB_USER=finvibe_user
+DB_PASSWORD=dev_password
 CORS_ORIGIN=http://localhost:5173
 ```
 
 ### Production (Docker)
 ```env
 NODE_ENV=production
-DB_TYPE=postgres
 DB_HOST=postgres
 DB_PASSWORD=strong_random_password_here
 CORS_ORIGIN=https://yourdomain.com
@@ -112,7 +100,6 @@ CORS_ORIGIN=https://yourdomain.com
 ### Production (Manual Deployment)
 ```env
 NODE_ENV=production
-DB_TYPE=postgres
 DB_HOST=your-postgres-host.com
 DB_PORT=5432
 DB_NAME=finvibe
@@ -136,11 +123,10 @@ CORS_ORIGIN=https://yourdomain.com
 
 If you're experiencing database connection issues:
 
-1. **Check DB_TYPE**: Ensure it matches your intended database
-2. **Verify PostgreSQL is running**: `docker-compose ps` or check your PostgreSQL service
-3. **Test connection**: `psql -h localhost -U finvibe_user -d finvibe`
-4. **Check credentials**: Ensure DB_USER and DB_PASSWORD are correct
-5. **Check host networking**: Use `localhost` for local, `postgres` for Docker
+1. **Verify PostgreSQL is running**: `docker-compose ps` or check your PostgreSQL service
+2. **Test connection**: `psql -h localhost -U finvibe_user -d finvibe`
+3. **Check credentials**: Ensure DB_USER and DB_PASSWORD are correct
+4. **Check host networking**: Use `localhost` for local, `postgres` for Docker
 
 ### CORS Issues
 

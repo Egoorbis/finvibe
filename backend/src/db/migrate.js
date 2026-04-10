@@ -1,98 +1,86 @@
-import db from './database.js';
+import DatabaseFactory from './database-factory.js';
+
+const db = await DatabaseFactory.createDatabase({
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  database: process.env.DB_NAME,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+});
 
 async function runMigrations() {
-  console.log('Running database migrations...');
-
-  const isPostgres = typeof db.pool !== 'undefined';
-  const idColumn = isPostgres ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT';
-  const timestampType = isPostgres ? 'TIMESTAMP' : 'DATETIME';
+  console.log('Running PostgreSQL database migrations...');
 
   try {
-    // Create users table (must be first as other tables reference it)
     await db.exec(`
       CREATE TABLE IF NOT EXISTS users (
-        id ${idColumn},
-        username TEXT NOT NULL UNIQUE,
-        email TEXT NOT NULL UNIQUE,
-        password TEXT NOT NULL,
-        created_at ${timestampType} DEFAULT CURRENT_TIMESTAMP,
-        updated_at ${timestampType} DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(255) NOT NULL UNIQUE,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        password VARCHAR(255) NOT NULL,
+        email_verified BOOLEAN DEFAULT FALSE,
+        verification_token VARCHAR(255),
+        verification_token_expires TIMESTAMP,
+        reset_token VARCHAR(255),
+        reset_token_expires TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
 
-    // Create accounts table
-    await db.exec(`
       CREATE TABLE IF NOT EXISTS accounts (
-        id ${idColumn},
-        user_id INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        type TEXT NOT NULL CHECK(type IN ('bank', 'credit_card')),
-        balance REAL DEFAULT 0,
-        currency TEXT DEFAULT 'USD',
-        created_at ${timestampType} DEFAULT CURRENT_TIMESTAMP,
-        updated_at ${timestampType} DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      )
-    `);
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name VARCHAR(255) NOT NULL,
+        type VARCHAR(50) NOT NULL CHECK(type IN ('bank', 'credit_card')),
+        balance NUMERIC(15, 2) DEFAULT 0,
+        currency VARCHAR(10) DEFAULT 'USD',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
 
-    // Create categories table
-    await db.exec(`
       CREATE TABLE IF NOT EXISTS categories (
-        id ${idColumn},
-        user_id INTEGER,
-        name TEXT NOT NULL,
-        type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
-        color TEXT,
-        icon TEXT,
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        name VARCHAR(255) NOT NULL,
+        type VARCHAR(50) NOT NULL CHECK(type IN ('income', 'expense')),
+        color VARCHAR(50),
+        icon VARCHAR(50),
         is_default INTEGER DEFAULT 0,
-        created_at ${timestampType} DEFAULT CURRENT_TIMESTAMP,
-        updated_at ${timestampType} DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      )
-    `);
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
 
-    // Create transactions table
-    await db.exec(`
       CREATE TABLE IF NOT EXISTS transactions (
-        id ${idColumn},
-        user_id INTEGER NOT NULL,
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         date DATE NOT NULL,
-        amount REAL NOT NULL,
-        type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
+        amount NUMERIC(15, 2) NOT NULL,
+        type VARCHAR(50) NOT NULL CHECK(type IN ('income', 'expense')),
         description TEXT,
-        account_id INTEGER NOT NULL,
-        category_id INTEGER NOT NULL,
+        account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE RESTRICT,
         tags TEXT,
         attachment_path TEXT,
-        created_at ${timestampType} DEFAULT CURRENT_TIMESTAMP,
-        updated_at ${timestampType} DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
-        FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT
-      )
-    `);
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
 
-    // Create budgets table
-    await db.exec(`
       CREATE TABLE IF NOT EXISTS budgets (
-        id ${idColumn},
-        user_id INTEGER NOT NULL,
-        category_id INTEGER NOT NULL,
-        amount REAL NOT NULL,
-        period TEXT NOT NULL CHECK(period IN ('monthly', 'yearly')),
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+        amount NUMERIC(15, 2) NOT NULL,
+        period VARCHAR(50) NOT NULL CHECK(period IN ('monthly', 'yearly')),
         start_date DATE NOT NULL,
         end_date DATE NOT NULL,
-        created_at ${timestampType} DEFAULT CURRENT_TIMESTAMP,
-        updated_at ${timestampType} DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
-      )
-    `);
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
 
-    // Create indexes for better query performance
-    await db.exec(`
       CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
       CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+      CREATE INDEX IF NOT EXISTS idx_users_reset_token ON users(reset_token);
+      CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users(verification_token);
       CREATE INDEX IF NOT EXISTS idx_accounts_user ON accounts(user_id);
       CREATE INDEX IF NOT EXISTS idx_categories_user ON categories(user_id);
       CREATE INDEX IF NOT EXISTS idx_transactions_user ON transactions(user_id);

@@ -35,8 +35,8 @@ This guide explains the changes made to migrate from SQLite to PostgreSQL in Azu
 ### Application Changes
 
 1. **Removed SQLite Dependency** (`backend/package.json`)
-   - Removed `better-sqlite3` package
-   - Kept `pg` (PostgreSQL driver) which was already present
+   - SQLite adapter removed; backend is now PostgreSQL-only
+   - `pg` (PostgreSQL driver) retained for all environments
 
 2. **CI/CD Updates** (`.github/workflows/azure-deploy-tf.yml`)
    - Added `TF_VAR_postgres_password` environment variable
@@ -50,9 +50,9 @@ This guide explains the changes made to migrate from SQLite to PostgreSQL in Azu
 
 ### Prerequisites
 
-The backend already has PostgreSQL support through the database factory pattern:
+The backend uses PostgreSQL exclusively:
 - `backend/src/db/postgres.js` - PostgreSQL adapter
-- `backend/src/db/database-factory.js` - Database factory that switches based on `DB_TYPE`
+- `backend/src/db/database-factory.js` - PostgreSQL-only factory
 - `backend/src/db/migrate-postgres.js` - PostgreSQL migrations
 
 ### Step 1: Set GitHub Secret
@@ -173,29 +173,6 @@ For production workloads, consider these alternatives:
 3. **Azure Container Apps Storage (Preview)**
    - Native persistent storage for Container Apps
    - Azure Files or Azure Blob Storage backend
-
-## Rollback Procedure
-
-If you need to rollback to SQLite:
-
-1. **Update Terraform Variables**:
-   ```hcl
-   # In backend container, change:
-   DB_TYPE = "sqlite"
-   # Remove PostgreSQL-specific variables
-   ```
-
-2. **Re-add SQLite Dependency**:
-   ```bash
-   cd backend
-   npm install better-sqlite3
-   ```
-
-3. **Redeploy**:
-   ```bash
-   git add . && git commit -m "rollback: revert to SQLite"
-   git push origin main
-   ```
 
 ## Troubleshooting
 

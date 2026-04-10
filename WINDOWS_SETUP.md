@@ -1,6 +1,6 @@
 # Windows Setup Guide for FinVibe
 
-This guide helps Windows users set up FinVibe with Node.js 25 and better-sqlite3.
+This guide helps Windows users set up FinVibe with Node.js 25 and PostgreSQL.
 
 ## Prerequisites
 
@@ -10,37 +10,12 @@ Ensure you have Node.js 25 installed. Check with:
 node --version
 ```
 
-### Windows Build Tools for better-sqlite3
+### PostgreSQL
 
-better-sqlite3 is a native Node.js addon that requires compilation on Windows. You need Visual Studio Build Tools with the Windows SDK.
-
-## Option 1: Install Visual Studio Build Tools (Recommended)
-
-1. **Download Visual Studio Build Tools**:
-   - Visit: https://visualstudio.microsoft.com/downloads/
-   - Scroll down to "Tools for Visual Studio"
-   - Download "Build Tools for Visual Studio 2022"
-
-2. **Install Required Components**:
-   During installation, select:
-   - ✅ **Desktop development with C++** workload
-   - ✅ **Windows 10 SDK** or **Windows 11 SDK** (under Individual components)
-   - ✅ **MSVC v143 - VS 2022 C++ x64/x86 build tools**
-
-3. **Verify Installation**:
-   ```bash
-   npm config get msvs_version
-   ```
-
-## Option 2: Use Pre-built Binaries (Easier but Less Reliable)
-
-If you don't want to install Visual Studio, better-sqlite3 v12.8.0 has improved prebuild support. Try:
-
+Install PostgreSQL locally (https://www.postgresql.org/download/windows/) or run the included Docker Compose stack to start a local database:
 ```bash
-npm install --prefer-offline
+docker compose up -d postgres
 ```
-
-If prebuilds aren't available for Node.js 25 on Windows, you'll need Option 1.
 
 ## Option 3: Use WSL2 (Linux Subsystem)
 
@@ -121,11 +96,9 @@ This avoids all native compilation issues.
 
 - **Minimum**: Node.js 18 LTS
 - **Recommended**: Node.js 20 LTS or Node.js 25
-- **better-sqlite3 v12.8.0**: Fully supports Node.js 25
 
 ## Additional Notes
 
 - The deprecated warnings for `inflight` and `glob@7.2.3` come from Jest 29.7.0
 - These will be resolved when Jest 30+ is released as stable
 - They don't affect functionality but are transitive dependencies
-- `prebuild-install` is deprecated but still used by better-sqlite3 v12 - this is a known issue

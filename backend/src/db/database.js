@@ -6,8 +6,6 @@ import DatabaseFactory from './database-factory.js';
  * based on environment configuration
  */
 const db = await DatabaseFactory.createDatabase({
-  type: process.env.DB_TYPE, // 'sqlite' or 'postgres'
-  // PostgreSQL config (if DB_TYPE=postgres)
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
   database: process.env.DB_NAME,

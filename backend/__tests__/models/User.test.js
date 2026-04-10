@@ -16,12 +16,12 @@ beforeAll(async () => {
   User = userModule.User;
 });
 
-afterAll(() => {
-  teardownTestDatabase(testDb);
+afterAll(async () => {
+  await teardownTestDatabase(testDb);
 });
 
-beforeEach(() => {
-  clearTestData(testDb);
+beforeEach(async () => {
+  await clearTestData(testDb);
 });
 
 describe('User Model', () => {

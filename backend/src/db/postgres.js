@@ -7,16 +7,21 @@ const { Pool } = pg;
  */
 class PostgresAdapter {
   constructor(config) {
-    this.pool = new Pool({
-      host: config.host || process.env.DB_HOST || 'localhost',
-      port: config.port || process.env.DB_PORT || 5432,
-      database: config.database || process.env.DB_NAME || 'finvibe',
-      user: config.user || process.env.DB_USER || 'postgres',
-      password: config.password || process.env.DB_PASSWORD,
-      max: config.max || 20, // Maximum number of clients in the pool
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
-    });
+    const PoolClass = config?.PoolClass || Pool;
+    if (config?.pool) {
+      this.pool = config.pool;
+    } else {
+      this.pool = new PoolClass({
+        host: config?.host || process.env.DB_HOST || 'localhost',
+        port: config?.port || process.env.DB_PORT || 5432,
+        database: config?.database || process.env.DB_NAME || 'finvibe',
+        user: config?.user || process.env.DB_USER || 'postgres',
+        password: config?.password || process.env.DB_PASSWORD,
+        max: config?.max || 20, // Maximum number of clients in the pool
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 2000,
+      });
+    }
 
     this.pool.on('error', (err) => {
       console.error('Unexpected error on idle PostgreSQL client', err);

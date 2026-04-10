@@ -24,12 +24,12 @@ beforeAll(async () => {
   Transaction = transactionModule.Transaction;
 });
 
-afterAll(() => {
-  teardownTestDatabase(testDb);
+afterAll(async () => {
+  await teardownTestDatabase(testDb);
 });
 
 beforeEach(async () => {
-  clearTestData(testDb);
+  await clearTestData(testDb);
 });
 
 describe('Budget Model', () => {

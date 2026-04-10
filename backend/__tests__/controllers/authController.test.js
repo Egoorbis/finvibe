@@ -24,12 +24,12 @@ beforeAll(async () => {
   app = appModule.default;
 });
 
-afterAll(() => {
-  teardownTestDatabase(testDb);
+afterAll(async () => {
+  await teardownTestDatabase(testDb);
 });
 
-beforeEach(() => {
-  clearTestData(testDb);
+beforeEach(async () => {
+  await clearTestData(testDb);
 });
 
 describe('Auth Controller', () => {
