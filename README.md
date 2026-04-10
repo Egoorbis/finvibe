@@ -158,7 +158,8 @@ http://localhost:5173
 - **[Getting Started](GETTING_STARTED.md)** - Step-by-step local development setup
 - **[Windows Setup](WINDOWS_SETUP.md)** - Windows-specific installation instructions
 
-### Configuration
+### Architecture & Configuration
+- **[Architecture Overview](ARCHITECTURE.md)** - System design, components, and data flow
 - **[Environment Variables](ENVIRONMENT.md)** - Environment configuration reference
 - **[Terraform Infrastructure](infra/README.md)** - Infrastructure as Code documentation
 
