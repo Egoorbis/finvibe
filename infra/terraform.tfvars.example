@@ -34,9 +34,9 @@ postgres_db_name   = "finvibe"
 postgres_user      = "finvibe_user"
 postgres_password  = "CHANGE_ME_SECURE_PASSWORD"
 
-# PostgreSQL Storage configuration (Managed Disk)
-# Managed disk size in GB (Premium SSD LRS). 64GB is a good default for small workloads.
-postgres_disk_size_gb = 64
+# PostgreSQL storage configuration (Premium Azure Files - FileStorage)
+# Minimum for Premium Azure Files is 100 GB; 128 GB is a good starting point for small workloads.
+postgres_disk_size_gb = 128
 
 # JWT secret for signing authentication tokens (minimum 32 characters)
 # Generate with: openssl rand -base64 32
