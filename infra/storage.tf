@@ -17,9 +17,11 @@ resource "azurerm_storage_account" "postgres" {
 
 # Premium Azure Files share for PostgreSQL
 resource "azurerm_storage_share" "postgres" {
-  name                 = local.postgres_file_share_name
-  storage_account_name = azurerm_storage_account.postgres.name
-  quota                = var.postgres_disk_size_gb
+  name               = local.postgres_file_share_name
+  storage_account_id = azurerm_storage_account.postgres.id
+  quota              = var.postgres_disk_size_gb
+  enabled_protocol   = "SMB"
+  access_tier        = "Premium"
 }
 
 # Container Apps Environment Storage backed by Azure Files

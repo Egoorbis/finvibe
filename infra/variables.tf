@@ -131,12 +131,12 @@ variable "frontend_allowed_ips" {
 }
 
 variable "postgres_disk_size_gb" {
-  description = "Managed disk size for PostgreSQL data in GB"
+  description = "Managed disk size for PostgreSQL data in GB (Premium FileStorage requires minimum 100 GB)"
   type        = number
-  default     = 64
+  default     = 100
 
   validation {
-    condition     = var.postgres_disk_size_gb >= 4 && var.postgres_disk_size_gb <= 32767
-    error_message = "Disk size must be between 4 GB and 32,767 GB"
+    condition     = var.postgres_disk_size_gb >= 100 && var.postgres_disk_size_gb <= 102400
+    error_message = "Premium FileStorage disk size must be between 100 GB and 102,400 GB (100 TB)"
   }
 }
