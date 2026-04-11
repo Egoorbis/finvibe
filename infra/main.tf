@@ -106,8 +106,8 @@ resource "azapi_resource" "postgres_container_app" {
         volumes = [
           {
             name        = "postgres-data"
-            storageType = "ManagedDisk"
-            storageName = azapi_resource.postgres_managed_disk_storage.name
+            storageType = "AzureFile"
+            storageName = azapi_resource.postgres_storage.name
           }
         ]
       }
@@ -121,7 +121,7 @@ resource "azapi_resource" "postgres_container_app" {
 
   depends_on = [
     module.container_apps_environment,
-    azapi_resource.postgres_managed_disk_storage
+    azapi_resource.postgres_storage
   ]
 }
 

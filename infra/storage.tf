@@ -1,17 +1,29 @@
-# Managed disk for PostgreSQL persistent storage
-resource "azurerm_managed_disk" "postgres" {
-  name                 = "${var.container_env_name}-pgdisk"
-  location             = azurerm_resource_group.main.location
-  resource_group_name  = azurerm_resource_group.main.name
-  storage_account_type = "Premium_LRS"
-  create_option        = "Empty"
-  disk_size_gb         = var.postgres_disk_size_gb
+locals {
+  postgres_storage_account_name = substr("st${join("", regexall("[a-z0-9]", lower(var.container_env_name)))}pg", 0, 24)
+  postgres_file_share_name      = "postgres-data"
+}
+
+# Premium file share storage account for PostgreSQL data
+resource "azurerm_storage_account" "postgres" {
+  name                     = local.postgres_storage_account_name
+  location                 = azurerm_resource_group.main.location
+  resource_group_name      = azurerm_resource_group.main.name
+  account_kind             = "FileStorage"
+  account_tier             = "Premium"
+  account_replication_type = "LRS"
 
   tags = var.tags
 }
 
-# Container Apps Environment Storage backed by Managed Disk (preview)
-resource "azapi_resource" "postgres_managed_disk_storage" {
+# Premium Azure Files share for PostgreSQL
+resource "azurerm_storage_share" "postgres" {
+  name                 = local.postgres_file_share_name
+  storage_account_name = azurerm_storage_account.postgres.name
+  quota                = var.postgres_disk_size_gb
+}
+
+# Container Apps Environment Storage backed by Azure Files
+resource "azapi_resource" "postgres_storage" {
   type      = "Microsoft.App/managedEnvironments/storages@2024-02-02-preview"
   name      = "postgres-storage"
   parent_id = module.container_apps_environment.resource_id
@@ -20,14 +32,17 @@ resource "azapi_resource" "postgres_managed_disk_storage" {
 
   body = {
     properties = {
-      storageType   = "ManagedDisk"
-      managedDiskId = azurerm_managed_disk.postgres.id
-      accessMode    = "ReadWrite"
+      azureFile = {
+        accessMode  = "ReadWrite"
+        accountName = azurerm_storage_account.postgres.name
+        accountKey  = azurerm_storage_account.postgres.primary_access_key
+        shareName   = azurerm_storage_share.postgres.name
+      }
     }
   }
 
   depends_on = [
     module.container_apps_environment,
-    azurerm_managed_disk.postgres
+    azurerm_storage_share.postgres
   ]
 }
