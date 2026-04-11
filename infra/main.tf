@@ -62,6 +62,7 @@ resource "azapi_resource" "postgres_container_app" {
   name      = "finvibe-postgres"
   location  = azurerm_resource_group.main.location
   parent_id = azurerm_resource_group.main.id
+  tags      = var.tags
 
   schema_validation_enabled = false
 
@@ -111,8 +112,6 @@ resource "azapi_resource" "postgres_container_app" {
         ]
       }
     }
-    location = azurerm_resource_group.main.location
-    tags     = var.tags
   }
 
   response_export_values = [
