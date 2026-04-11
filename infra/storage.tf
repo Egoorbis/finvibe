@@ -19,6 +19,7 @@ resource "azurerm_storage_account" "postgres" {
 resource "azurerm_storage_share" "postgres" {
   name                 = local.postgres_file_share_name
   storage_account_id   = azurerm_storage_account.postgres.id
+  enabled_protocol     = "SMB"
   quota                = var.postgres_disk_size_gb
 }
 
