@@ -1,10 +1,10 @@
-# Azure Container Apps with Managed Disk for PostgreSQL
+# Azure Container Apps with Premium Azure Files for PostgreSQL
 
 ## What Changed
 
-- Switched PostgreSQL persistent storage from Azure Files to an Azure Managed Disk for better durability and IOPS.
-- Replaced the Azure Files environment storage with a Managed Disk-backed storage on the Container Apps environment (via `azapi_resource`).
-- Simplified configuration: only the managed disk size (`postgres_disk_size_gb`) is required.
+- PostgreSQL persistent storage now uses a premium Azure Files share (FileStorage) instead of a managed disk, aligning with supported Container Apps storage APIs.
+- Environment storage is defined as an Azure Files mount via `Microsoft.App/managedEnvironments/storages`.
+- The only input remains the storage quota (`postgres_disk_size_gb`), now applied to the Azure Files share.
 
 ## Architecture
 
@@ -14,18 +14,18 @@
 │  ┌───────────────────────────────────────────────┐ │
 │  │  Volume Mount: /var/lib/postgresql/data       │ │
 │  │  ↓                                             │ │
-│  │  ManagedDisk Volume (Premium_LRS)             │ │
+│  │  AzureFile Volume (Premium FileStorage)        │ │
 │  └───────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────┘
                       ↓
 ┌─────────────────────────────────────────────────────┐
-│  Container App Environment Storage (ManagedDisk)    │
+│  Container App Environment Storage (AzureFile)      │
 └─────────────────────────────────────────────────────┘
                       ↓
 ┌─────────────────────────────────────────────────────┐
-│  Azure Managed Disk (create option: Empty)          │
-│  - Size: postgres_disk_size_gb (default 64 GB)      │
-│  - SKU: Premium_LRS                                 │
+│  Azure Storage Account (FileStorage, Premium LRS)   │
+│  - Azure Files share quota: postgres_disk_size_gb   │
+│  - Access via storage account key (mounted by ACA)  │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -34,11 +34,11 @@
 In `infra/terraform.tfvars`:
 
 ```hcl
-# Managed disk size in GB (Premium SSD LRS)
+# Azure Files share quota in GB (Premium FileStorage)
 postgres_disk_size_gb = 64
 ```
 
-Premium_LRS is used by default for better latency/IOPS for PostgreSQL.
+Premium FileStorage is used for lower latency and higher IOPS for PostgreSQL data.
 
 ## Deployment Notes
 
@@ -49,7 +49,7 @@ Premium_LRS is used by default for better latency/IOPS for PostgreSQL.
 
 ## Data Migration
 
-If migrating from the previous Azure Files-backed storage:
-- Take a pg_dump from the old deployment.
-- Apply the new Managed Disk deployment.
+If migrating from the previous managed disk or Azure Files setup:
+- Take a `pg_dump` from the old deployment.
+- Apply the updated Azure Files-backed deployment.
 - Restore the dump into the new PostgreSQL container.
