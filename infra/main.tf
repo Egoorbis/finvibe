@@ -57,77 +57,72 @@ module "container_apps_environment" {
   tags = var.tags
 }
 
-# PostgreSQL Container App using Azure Verified Module
-module "postgres_container_app" {
-  source  = "Azure/avm-res-app-containerapp/azurerm"
-  version = "0.8.0"
+resource "azapi_resource" "postgres_container_app" {
+  type      = "Microsoft.App/containerApps@2024-03-01"
+  name      = "finvibe-postgres"
+  location  = azurerm_resource_group.main.location
+  parent_id = azurerm_resource_group.main.id
 
-  name                                  = "finvibe-postgres"
-  resource_group_name                   = azurerm_resource_group.main.name
-  container_app_environment_resource_id = module.container_apps_environment.resource_id
+  schema_validation_enabled = false
 
-  # Revision mode
-  revision_mode = "Single"
-
-  # Container configuration
-  template = {
-    containers = [{
-      name   = "postgres"
-      image  = "postgres:16-alpine"
-      cpu    = 0.5
-      memory = "1Gi"
-
-      env = [
-        {
-          name  = "POSTGRES_DB"
-          value = var.postgres_db_name
-        },
-        {
-          name  = "POSTGRES_USER"
-          value = var.postgres_user
-        },
-        {
-          name  = "POSTGRES_PASSWORD"
-          value = var.postgres_password
-        },
-        {
-          name  = "PGDATA"
-          value = "/var/lib/postgresql/data"
+  body = {
+    properties = {
+      managedEnvironmentId = module.container_apps_environment.resource_id
+      configuration = {
+        ingress = {
+          external   = false
+          targetPort = 5432
+          transport  = "tcp"
         }
-      ]
-
-      volume_mounts = [{
-        name = "postgres-data"
-        path = "/var/lib/postgresql/data"
-      }]
-    }]
-
-    min_replicas = 1
-    max_replicas = 1
-
-    volumes = [{
-      name         = "postgres-data"
-      storage_type = "AzureFile"
-      storage_name = azurerm_container_app_environment_storage.postgres.name
-    }]
+      }
+      template = {
+        containers = [
+          {
+            name  = "postgres"
+            image = "postgres:16-alpine"
+            env = [
+              { name = "POSTGRES_DB", value = var.postgres_db_name },
+              { name = "POSTGRES_USER", value = var.postgres_user },
+              { name = "POSTGRES_PASSWORD", value = var.postgres_password },
+              { name = "PGDATA", value = "/var/lib/postgresql/data" }
+            ]
+            resources = {
+              cpu    = 0.5
+              memory = "1Gi"
+            }
+            volumeMounts = [
+              {
+                volumeName = "postgres-data"
+                mountPath  = "/var/lib/postgresql/data"
+              }
+            ]
+          }
+        ]
+        scale = {
+          minReplicas = 1
+          maxReplicas = 1
+        }
+        volumes = [
+          {
+            name        = "postgres-data"
+            storageType = "ManagedDisk"
+            storageName = azapi_resource.postgres_managed_disk_storage.name
+          }
+        ]
+      }
+    }
+    location = azurerm_resource_group.main.location
+    tags     = var.tags
   }
 
-  # Internal-only ingress for database access
-  ingress = {
-    external_enabled = false
-    target_port      = 5432
-    transport        = "tcp"
-    traffic_weight = [{
-      latest_revision = true
-      percentage      = 100
-    }]
-  }
-
-  tags = var.tags
+  response_export_values = [
+    "properties.latestRevisionFqdn",
+    "properties.configuration.ingress.fqdn"
+  ]
 
   depends_on = [
     module.container_apps_environment,
-    azurerm_container_app_environment_storage.postgres
+    azapi_resource.postgres_managed_disk_storage
   ]
 }
 
@@ -171,7 +166,7 @@ module "backend_container_app" {
         },
         {
           name  = "DB_HOST"
-          value = module.postgres_container_app.latest_revision_fqdn
+          value = azapi_resource.postgres_container_app.output.properties.latestRevisionFqdn
         },
         {
           name  = "DB_PORT"
@@ -234,7 +229,7 @@ module "backend_container_app" {
   depends_on = [
     module.container_apps_environment,
     module.avm-res-managedidentity-userassignedidentity,
-    module.postgres_container_app
+    azapi_resource.postgres_container_app
   ]
 
 }
@@ -268,7 +263,7 @@ module "frontend_container_app" {
       env = [
         {
           name  = "BACKEND_URL"
-          value = "http://${var.backend_app_name}.${module.container_apps_environment.default_domain}"
+          value = "https://${var.backend_app_name}.${module.container_apps_environment.default_domain}"
         }
       ]
     }]

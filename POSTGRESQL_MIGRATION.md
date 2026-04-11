@@ -129,7 +129,7 @@ The backend will automatically run migrations on startup if the schema version d
 
 - **Database Type**: Set via `DB_TYPE=postgres`
 - **Connection**: Connects to PostgreSQL container via internal FQDN
-- **Host**: `module.postgres_container_app.fqdn` (internal DNS)
+- **Host**: `azapi_resource.postgres_container_app.output.properties.latestRevisionFqdn` (internal DNS)
 - **Port**: 5432
 
 ### Database Factory Pattern
