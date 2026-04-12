@@ -35,10 +35,12 @@ In `infra/terraform.tfvars`:
 
 ```hcl
 # Azure Files share quota in GB (Premium FileStorage)
-postgres_disk_size_gb = 64
+postgres_disk_size_gb = 128
 ```
 
 Premium FileStorage is used for lower latency and higher IOPS for PostgreSQL data.
+
+Note: Premium Azure Files requires a minimum provisioned quota of 100 GB. Increase `postgres_disk_size_gb` as needed for workload growth.
 
 ## Deployment Notes
 
