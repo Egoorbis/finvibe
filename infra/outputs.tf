@@ -41,8 +41,8 @@ output "container_apps_environment_name" {
 }
 
 output "postgres_fqdn" {
-  description = "FQDN of the PostgreSQL container"
-  value       = azapi_resource.postgres_container_app.output.properties.latestRevisionFqdn
+  description = "FQDN of the PostgreSQL Flexible Server"
+  value       = module.postgres_flexible_server.fqdn
 }
 
 
@@ -52,7 +52,7 @@ output "deployment_summary" {
     resource_group   = azurerm_resource_group.main.name
     location         = azurerm_resource_group.main.location
     acr_login_server = data.azurerm_container_registry.existing.login_server
-    postgres_fqdn    = azapi_resource.postgres_container_app.output.properties.latestRevisionFqdn
+    postgres_fqdn    = module.postgres_flexible_server.fqdn
     backend_url      = module.backend_container_app.fqdn_url
     backend_api_url  = "${module.backend_container_app.fqdn_url}/api"
     frontend_url     = module.frontend_container_app.fqdn_url

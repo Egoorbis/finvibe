@@ -52,22 +52,34 @@ See the **[Azure Deployment Guide](AZURE_DEPLOYMENT.md)** for complete setup ins
 
 The easiest way to deploy FinVibe locally or on your own server is using Docker. See the **[Docker Setup Guide](DOCKER_SETUP.md)** for comprehensive instructions.
 
-**Quick Docker Start:**
+**Run locally with Docker from the repository root:**
+
+Copy `.env.example` to `.env` using the command that matches your shell:
+
 ```bash
-# Copy environment file
+# Bash / WSL / Git Bash
 cp .env.example .env
+```
 
-# Start all services
-docker-compose up -d
+```powershell
+# PowerShell
+Copy-Item .env.example .env
+```
 
-# Initialize database
-docker-compose exec backend npm run migrate
-docker-compose exec backend npm run seed
+Start the stack and initialize the database:
+
+```bash
+docker compose up --build -d
+docker compose exec backend npm run db:migrate
+docker compose exec backend npm run db:seed
 ```
 
 **Access:**
 - Frontend: http://localhost
 - Backend API: http://localhost:3000
+- PostgreSQL: localhost:5432
+
+If port `80` is already in use on your machine, set `FRONTEND_PORT=8080` in `.env`, restart the stack, and then open `http://localhost:8080`.
 
 **For detailed instructions, troubleshooting, and production deployment, see [DOCKER_SETUP.md](DOCKER_SETUP.md)**
 
@@ -110,10 +122,10 @@ npm install
 cp .env.example .env
 
 # Initialize the database (creates tables)
-npm run migrate
+npm run db:migrate
 
 # Seed default categories (adds starter data)
-npm run seed
+npm run db:seed
 
 # Start the development server
 npm run dev

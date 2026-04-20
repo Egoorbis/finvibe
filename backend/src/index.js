@@ -36,6 +36,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 
+// Trust common private/local proxies (Docker bridge, loopback) for correct client IP handling.
+app.set('trust proxy', process.env.TRUST_PROXY || 'loopback, linklocal, uniquelocal');
+
 // Security Middleware (apply first)
 app.use(securityHeaders);
 app.use(additionalSecurity);

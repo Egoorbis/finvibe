@@ -42,13 +42,15 @@ Before starting, ensure you have the following installed:
   - [Install Docker Desktop on Mac](https://docs.docker.com/desktop/install/mac-install/)
   - [Install Docker Desktop on Windows](https://docs.docker.com/desktop/install/windows-install/)
 
-- **Docker Compose**: Version 2.0 or higher (included with Docker Desktop)
+- **Docker Compose v2**: Included with Docker Desktop and available as `docker compose`
 
 Verify installation:
 ```bash
 docker --version
-docker-compose --version
+docker compose version
 ```
+
+If your machine still uses the legacy `docker-compose` command, you can substitute it anywhere this guide uses `docker compose`.
 
 ---
 
@@ -58,24 +60,31 @@ For a rapid setup with default settings:
 
 ```bash
 # 1. Clone the repository (if not already done)
-git clone <repository-url>
+git clone https://github.com/Egoorbis/finvibe.git
 cd finvibe
 
-# 2. Create environment file
-cp .env.example .env
+# 2. Copy the environment file
+# Bash / WSL / Git Bash: cp .env.example .env
+# PowerShell: Copy-Item .env.example .env
 
-# 3. Start all services
-docker-compose up -d
+# 3. Build and start all services
+docker compose up --build -d
 
-# 4. Initialize the database
-docker-compose exec backend npm run migrate
-docker-compose exec backend npm run seed
+# 4. Wait until the containers are healthy
+docker compose ps
 
-# 5. Access the application
-# Frontend: http://localhost
-# Backend API: http://localhost:3000
-# PostgreSQL: localhost:5432
+# 5. Initialize the database (first run only)
+docker compose exec backend npm run db:migrate
+docker compose exec backend npm run db:seed
 ```
+
+Then open the application:
+
+- Frontend: `http://localhost`
+- Backend API: `http://localhost:3000`
+- PostgreSQL: `localhost:5432`
+
+If port `80` is already in use, set `FRONTEND_PORT=8080` in `.env`, run `docker compose up -d` again, and open `http://localhost:8080`.
 
 ---
 
@@ -83,9 +92,16 @@ docker-compose exec backend npm run seed
 
 ### Step 1: Environment Configuration
 
-1. **Copy the environment file:**
+1. **Copy the environment file from the repository root:**
+
    ```bash
+   # Bash / WSL / Git Bash
    cp .env.example .env
+   ```
+
+   ```powershell
+   # PowerShell
+   Copy-Item .env.example .env
    ```
 
 2. **Edit the `.env` file** (optional, defaults are provided):
@@ -120,7 +136,7 @@ docker-compose exec backend npm run seed
 
 Build and start all containers:
 ```bash
-docker-compose up -d
+docker compose up --build -d
 ```
 
 This command will:
@@ -145,7 +161,7 @@ This command will:
 
 Check that all services are healthy:
 ```bash
-docker-compose ps
+docker compose ps
 ```
 
 **Expected output:**
@@ -166,7 +182,7 @@ All services should show `Up (healthy)` status. If they show `Up (health: starti
 
 Create the database schema:
 ```bash
-docker-compose exec backend npm run migrate
+docker compose exec backend npm run db:migrate
 ```
 
 **Expected output:**
@@ -183,7 +199,7 @@ docker-compose exec backend npm run migrate
 
 Populate with default categories:
 ```bash
-docker-compose exec backend npm run seed
+docker compose exec backend npm run db:seed
 ```
 
 **Expected output:**
@@ -249,7 +265,7 @@ curl http://localhost:3000/api/categories
 
 Connect to PostgreSQL directly:
 ```bash
-docker-compose exec postgres psql -U finvibe_user -d finvibe
+docker compose exec postgres psql -U finvibe_user -d finvibe
 ```
 
 Once connected, run:
@@ -341,48 +357,48 @@ All commands should return valid JSON responses without errors.
 
 **All services:**
 ```bash
-docker-compose logs -f
+docker compose logs -f
 ```
 
 **Specific service:**
 ```bash
-docker-compose logs -f backend
-docker-compose logs -f frontend
-docker-compose logs -f postgres
+docker compose logs -f backend
+docker compose logs -f frontend
+docker compose logs -f postgres
 ```
 
 **Last N lines:**
 ```bash
-docker-compose logs --tail=50 backend
+docker compose logs --tail=50 backend
 ```
 
 ### Restart Services
 
 **All services:**
 ```bash
-docker-compose restart
+docker compose restart
 ```
 
 **Specific service:**
 ```bash
-docker-compose restart backend
+docker compose restart backend
 ```
 
 ### Stop Services
 
 **Stop without removing containers:**
 ```bash
-docker-compose stop
+docker compose stop
 ```
 
 **Stop and remove containers (keeps volumes):**
 ```bash
-docker-compose down
+docker compose down
 ```
 
 **Stop, remove containers and volumes (⚠️ deletes all data):**
 ```bash
-docker-compose down -v
+docker compose down -v
 ```
 
 ### Rebuild Containers
@@ -390,39 +406,39 @@ docker-compose down -v
 After code changes:
 ```bash
 # Rebuild and restart
-docker-compose up -d --build
+docker compose up -d --build
 
 # Rebuild specific service
-docker-compose up -d --build backend
+docker compose up -d --build backend
 ```
 
 ### Access Container Shell
 
 **Backend:**
 ```bash
-docker-compose exec backend sh
+docker compose exec backend sh
 ```
 
 **Frontend:**
 ```bash
-docker-compose exec frontend sh
+docker compose exec frontend sh
 ```
 
 **PostgreSQL:**
 ```bash
-docker-compose exec postgres sh
+docker compose exec postgres sh
 ```
 
 ### Database Backup
 
 **Create backup:**
 ```bash
-docker-compose exec postgres pg_dump -U finvibe_user finvibe > backup.sql
+docker compose exec postgres pg_dump -U finvibe_user finvibe > backup.sql
 ```
 
 **Restore backup:**
 ```bash
-cat backup.sql | docker-compose exec -T postgres psql -U finvibe_user -d finvibe
+cat backup.sql | docker compose exec -T postgres psql -U finvibe_user -d finvibe
 ```
 
 ---
@@ -433,49 +449,57 @@ cat backup.sql | docker-compose exec -T postgres psql -U finvibe_user -d finvibe
 
 **Check logs:**
 ```bash
-docker-compose logs
+docker compose logs
 ```
 
 **Common issues:**
 1. **Port already in use:**
    ```bash
-   # Find process using port
-   lsof -i :3000
-   lsof -i :80
-
    # Change ports in .env
    BACKEND_PORT=3001
    FRONTEND_PORT=8080
    ```
 
+   On Windows PowerShell, you can inspect port usage with:
+   ```powershell
+   Get-NetTCPConnection -LocalPort 3000,80,5432 -ErrorAction SilentlyContinue
+   ```
+
+   On Linux, macOS, WSL, or Git Bash, you can use:
+   ```bash
+   lsof -i :3000
+   lsof -i :80
+   lsof -i :5432
+   ```
+
 2. **PostgreSQL initialization failed:**
    ```bash
    # Remove volumes and recreate
-   docker-compose down -v
-   docker-compose up -d
+   docker compose down -v
+   docker compose up -d
    ```
 
 3. **Build errors:**
    ```bash
    # Clean build cache
-   docker-compose build --no-cache
+   docker compose build --no-cache
    ```
 
 ### Database Connection Issues
 
 **Verify PostgreSQL is running:**
 ```bash
-docker-compose ps postgres
+docker compose ps postgres
 ```
 
 **Check PostgreSQL logs:**
 ```bash
-docker-compose logs postgres
+docker compose logs postgres
 ```
 
 **Test connection:**
 ```bash
-docker-compose exec postgres pg_isready -U finvibe_user
+docker compose exec postgres pg_isready -U finvibe_user
 ```
 
 **Expected output:** `accepting connections`
@@ -506,7 +530,7 @@ docker-compose exec postgres pg_isready -U finvibe_user
 
 5. **Rebuild frontend** if configuration changed:
    ```bash
-   docker-compose up -d --build frontend
+   docker compose up -d --build frontend
    ```
 
 ### Slow Performance
@@ -529,7 +553,7 @@ docker-compose exec postgres pg_isready -U finvibe_user
 
 **Check health status:**
 ```bash
-docker-compose ps
+docker compose ps
 ```
 
 **Inspect health check logs:**

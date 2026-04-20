@@ -37,6 +37,19 @@ async function seedDatabase() {
 
     for (const category of defaultCategories) {
       try {
+        const existing = await db.get(
+          `SELECT id
+           FROM categories
+           WHERE user_id IS NULL AND name = $1 AND type = $2
+           LIMIT 1`,
+          [category.name, category.type]
+        );
+
+        if (existing) {
+          existingCount++;
+          continue;
+        }
+
         await Category.create(category);
         seededCount++;
       } catch (error) {

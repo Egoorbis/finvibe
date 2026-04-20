@@ -1,7 +1,13 @@
 import { Resend } from 'resend';
 
-// Initialize Resend client
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResendClient() {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY is not configured');
+  }
+
+  return new Resend(apiKey);
+}
 
 // Verify email configuration on startup
 export const verifyEmailConfig = async () => {
@@ -26,6 +32,7 @@ export const sendPasswordResetEmail = async (to, resetToken, username) => {
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@finvibe.com';
 
   try {
+    const resend = getResendClient();
     const { data, error } = await resend.emails.send({
       from: `FinVibe <${fromEmail}>`,
       to: [to],
@@ -120,6 +127,7 @@ export const sendVerificationEmail = async (to, verificationToken, username) => 
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@finvibe.com';
 
   try {
+    const resend = getResendClient();
     const { data, error } = await resend.emails.send({
       from: `FinVibe <${fromEmail}>`,
       to: [to],
@@ -202,6 +210,7 @@ export const sendWelcomeEmail = async (to, username) => {
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@finvibe.com';
 
   try {
+    const resend = getResendClient();
     const { data, error } = await resend.emails.send({
       from: `FinVibe <${fromEmail}>`,
       to: [to],

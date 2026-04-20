@@ -130,13 +130,19 @@ variable "frontend_allowed_ips" {
   ]
 }
 
-variable "postgres_disk_size_gb" {
-  description = "Provisioned Azure Files share size for PostgreSQL data in GB (Premium FileStorage requires minimum 100 GB)"
+variable "postgres_sku_name" {
+  description = "SKU name for the PostgreSQL Flexible Server (e.g., B_Standard_B1ms for burstable, GP_Standard_D2s_v3 for general purpose)"
+  type        = string
+  default     = "Standard_B1ms"
+}
+
+variable "postgres_storage_mb" {
+  description = "Storage size in MB for the PostgreSQL Flexible Server (minimum 32768)"
   type        = number
-  default     = 128
+  default     = 32768
 
   validation {
-    condition     = var.postgres_disk_size_gb >= 100 && var.postgres_disk_size_gb <= 32767
-    error_message = "Premium Azure Files shares require a size between 100 GB and 32,767 GB"
+    condition     = var.postgres_storage_mb >= 32768
+    error_message = "PostgreSQL Flexible Server storage must be at least 32768 MB (32 GB)."
   }
 }

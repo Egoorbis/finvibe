@@ -57,73 +57,40 @@ module "container_apps_environment" {
   tags = var.tags
 }
 
-resource "azapi_resource" "postgres_container_app" {
-  type      = "Microsoft.App/containerApps@2024-03-01"
-  name      = "finvibe-postgres"
-  location  = azurerm_resource_group.main.location
-  parent_id = azurerm_resource_group.main.id
-  tags      = var.tags
+# Azure Database for PostgreSQL Flexible Server using Azure Verified Module
+module "postgres_flexible_server" {
+  source  = "Azure/avm-res-dbforpostgresql-flexibleserver/azurerm"
+  version = "0.2.2"
 
-  schema_validation_enabled = false
+  name                = "psql-finvibe-${var.location}"
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
 
-  body = {
-    properties = {
-      managedEnvironmentId = module.container_apps_environment.resource_id
-      configuration = {
-        ingress = {
-          external   = false
-          targetPort = 5432
-          transport  = "tcp"
-        }
-      }
-      template = {
-        containers = [
-          {
-            name  = "postgres"
-            image = "postgres:16-alpine"
-            env = [
-              { name = "POSTGRES_DB", value = var.postgres_db_name },
-              { name = "POSTGRES_USER", value = var.postgres_user },
-              { name = "POSTGRES_PASSWORD", value = var.postgres_password },
-              { name = "PGDATA", value = "/var/lib/postgresql/data" }
-            ]
-            resources = {
-              cpu    = 0.5
-              memory = "1Gi"
-            }
-            volumeMounts = [
-              {
-                volumeName = "postgres-data"
-                mountPath  = "/var/lib/postgresql/data"
-              }
-            ]
-          }
-        ]
-        scale = {
-          minReplicas = 1
-          maxReplicas = 1
-        }
-        volumes = [
-          {
-            name        = "postgres-data"
-            storageType = "AzureFile"
-            storageName = azapi_resource.postgres_storage.name
-          }
-        ]
-      }
+  administrator_login    = var.postgres_user
+  administrator_password = var.postgres_password
+
+  sku_name   = var.postgres_sku_name
+  storage_mb = var.postgres_storage_mb
+
+  # Allow access from Azure services (Container Apps)
+  firewall_rules = {
+    allow_azure_services = {
+      name             = "AllowAzureServices"
+      start_ip_address = "0.0.0.0"
+      end_ip_address   = "0.0.0.0"
     }
   }
 
-  response_export_values = [
-    "properties.latestRevisionFqdn",
-    "properties.configuration.ingress.fqdn"
-  ]
+  databases = {
+    (var.postgres_db_name) = {
+      charset   = "UTF8"
+      collation = "en_US.utf8"
+    }
+  }
 
-  depends_on = [
-    module.container_apps_environment,
-    azapi_resource.postgres_storage
-  ]
+  tags = var.tags
 }
+
 
 # Backend Container App using Azure Verified Module
 module "backend_container_app" {
@@ -165,7 +132,7 @@ module "backend_container_app" {
         },
         {
           name  = "DB_HOST"
-          value = azapi_resource.postgres_container_app.output.properties.latestRevisionFqdn
+          value = module.postgres_flexible_server.fqdn
         },
         {
           name  = "DB_PORT"
@@ -228,7 +195,7 @@ module "backend_container_app" {
   depends_on = [
     module.container_apps_environment,
     module.avm-res-managedidentity-userassignedidentity,
-    azapi_resource.postgres_container_app
+    module.postgres_flexible_server
   ]
 
 }

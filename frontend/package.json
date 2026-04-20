@@ -1,6 +1,6 @@
 {
   "name": "finvibe-frontend",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Frontend for FinVibe - Personal Finance Tracker",
   "type": "module",
   "scripts": {
