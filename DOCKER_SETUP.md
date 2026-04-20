@@ -18,7 +18,7 @@ Browser → Frontend (nginx:80) → /api → Backend (Node.js:3000) → PostgreS
 The frontend uses an **nginx reverse proxy** to forward API requests:
 - All API calls use relative URLs (`/api/...`)
 - Nginx proxies these to the backend via the `BACKEND_URL` environment variable
-- This pattern works seamlessly across all environments (local, Docker, Azure)
+- This pattern works seamlessly across all environments (local and Docker)
 
 ## Table of Contents
 

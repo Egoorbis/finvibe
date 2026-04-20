@@ -26,7 +26,6 @@ A modern, full-stack personal finance tracker to help you manage your expenses, 
 ### Backend
 - **Node.js** - Runtime environment
 - **Express** - Web framework
-- **PostgreSQL** - Production database
 - **PostgreSQL** - Primary database
 - **Multer** - File upload handling
 - **Express Validator** - Input validation
@@ -38,21 +37,11 @@ A modern, full-stack personal finance tracker to help you manage your expenses, 
 
 ## Deployment Options
 
-### Option 1: Azure Container Apps (Recommended for Production)
+### Option 1: Docker (Recommended)
 
-Deploy FinVibe to Azure using Terraform and GitHub Actions. The deployment uses:
-- **Infrastructure as Code**: Terraform with Azure Verified Modules (AVM)
-- **Automated CI/CD**: GitHub Actions with OIDC authentication
-- **Container orchestration**: Azure Container Apps with auto-scaling
-- **Managed services**: Azure Container Registry, Log Analytics
+The easiest way to run FinVibe is with Docker. See the **[Docker Setup Guide](DOCKER_SETUP.md)** for full instructions.
 
-See the **[Azure Deployment Guide](AZURE_DEPLOYMENT.md)** for complete setup instructions.
-
-### Option 2: Docker Deployment (Recommended for Self-Hosting)
-
-The easiest way to deploy FinVibe locally or on your own server is using Docker. See the **[Docker Setup Guide](DOCKER_SETUP.md)** for comprehensive instructions.
-
-**Run locally with Docker from the repository root:**
+**Quick start from the repository root:**
 
 Copy `.env.example` to `.env` using the command that matches your shell:
 
@@ -77,13 +66,10 @@ docker compose exec backend npm run db:seed
 **Access:**
 - Frontend: http://localhost
 - Backend API: http://localhost:3000
-- PostgreSQL: localhost:5432
 
-If port `80` is already in use on your machine, set `FRONTEND_PORT=8080` in `.env`, restart the stack, and then open `http://localhost:8080`.
+If port `80` is already in use, set `FRONTEND_PORT=8080` in `.env`, restart the stack, and open `http://localhost:8080`.
 
-**For detailed instructions, troubleshooting, and production deployment, see [DOCKER_SETUP.md](DOCKER_SETUP.md)**
-
-### Option 3: Local Development Setup
+### Option 2: Local Development (No Docker)
 
 For local development without Docker:
 
@@ -165,15 +151,14 @@ http://localhost:5173
 ## Documentation
 
 ### Deployment & Setup
-- **[Azure Deployment Guide](AZURE_DEPLOYMENT.md)** - Production deployment using Terraform and GitHub Actions
-- **[Docker Setup Guide](DOCKER_SETUP.md)** - Local deployment with Docker Compose
+- **[Docker Setup Guide](DOCKER_SETUP.md)** - Running with Docker Compose
 - **[Getting Started](GETTING_STARTED.md)** - Step-by-step local development setup
 - **[Windows Setup](WINDOWS_SETUP.md)** - Windows-specific installation instructions
 
 ### Architecture & Configuration
 - **[Architecture Overview](ARCHITECTURE.md)** - System design, components, and data flow
 - **[Environment Variables](ENVIRONMENT.md)** - Environment configuration reference
-- **[Terraform Infrastructure](infra/README.md)** - Infrastructure as Code documentation
+- **[Security](SECURITY_IMPLEMENTATION.md)** - Security features and implementation
 
 ---
 
@@ -290,8 +275,6 @@ This approach allows the frontend to use relative URLs (`/api/...`) that work se
 - [ ] Recurring transactions
 - [ ] Data export (CSV/PDF)
 - [ ] Mobile app
-- [ ] Cloud database migration
-- [ ] User authentication
 - [ ] Data backup and restore
 - [ ] Receipt OCR scanning
 - [ ] Budget alerts and notifications
