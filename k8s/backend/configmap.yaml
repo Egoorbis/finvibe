@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: finvibe
+  labels:
+    app: backend
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/part-of: finvibe
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  DB_TYPE: "postgres"
+  # Matches the headless service name: postgres.<namespace>.svc.cluster.local
+  DB_HOST: "postgres"
+  DB_PORT: "5432"
+  # Update this to the domain name you expose the app on
+  CORS_ORIGIN: "https://finvibe.example.com"
