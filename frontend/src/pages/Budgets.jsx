@@ -3,6 +3,44 @@ import { budgetService, categoryService } from '../services';
 import { formatCurrency } from '../utils/helpers';
 import './Budgets.css';
 
+const getDefaultFormData = () => {
+  const startDate = new Date().toISOString().split('T')[0];
+  return {
+    category_id: '',
+    amount: 0,
+    period: 'monthly',
+    start_date: startDate,
+    end_date: calculateEndDate(startDate, 'monthly')
+  };
+};
+
+const dedupeCategories = (items) => {
+  const seen = new Set();
+  return items.filter((category) => {
+    const key = `${(category.type || '').toLowerCase()}:${(category.name || '').trim().toLowerCase()}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+};
+
+function calculateEndDate(startDate, period) {
+  const start = new Date(startDate);
+  const end = new Date(start);
+
+  if (period === 'monthly') {
+    end.setMonth(end.getMonth() + 1);
+    end.setDate(end.getDate() - 1);
+  } else if (period === 'yearly') {
+    end.setFullYear(end.getFullYear() + 1);
+    end.setDate(end.getDate() - 1);
+  }
+
+  return end.toISOString().split('T')[0];
+}
+
 const Budgets = () => {
   const [budgets, setBudgets] = useState([]);
   const [budgetProgress, setBudgetProgress] = useState([]);
@@ -10,13 +48,7 @@ const Budgets = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({
-    category_id: '',
-    amount: 0,
-    period: 'monthly',
-    start_date: new Date().toISOString().split('T')[0],
-    end_date: ''
-  });
+  const [formData, setFormData] = useState(getDefaultFormData);
 
   useEffect(() => {
     loadData();
@@ -27,31 +59,16 @@ const Budgets = () => {
       const [budgetsRes, progressRes, categoriesRes] = await Promise.all([
         budgetService.getAll(),
         budgetService.getAllProgress(),
-        categoryService.getAll()
+        categoryService.getAll('expense')
       ]);
       setBudgets(budgetsRes.data);
       setBudgetProgress(progressRes.data);
-      setCategories(categoriesRes.data.filter(c => c.type === 'expense'));
+      setCategories(dedupeCategories(categoriesRes.data));
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
-  };
-
-  const calculateEndDate = (startDate, period) => {
-    const start = new Date(startDate);
-    let end = new Date(start);
-
-    if (period === 'monthly') {
-      end.setMonth(end.getMonth() + 1);
-      end.setDate(end.getDate() - 1);
-    } else if (period === 'yearly') {
-      end.setFullYear(end.getFullYear() + 1);
-      end.setDate(end.getDate() - 1);
-    }
-
-    return end.toISOString().split('T')[0];
   };
 
   const handleStartDateChange = (date) => {
@@ -67,20 +84,19 @@ const Budgets = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      const payload = {
+        ...formData,
+        end_date: formData.end_date || calculateEndDate(formData.start_date, formData.period)
+      };
+
       if (editingId) {
-        await budgetService.update(editingId, formData);
+        await budgetService.update(editingId, payload);
       } else {
-        await budgetService.create(formData);
+        await budgetService.create(payload);
       }
       setShowForm(false);
       setEditingId(null);
-      setFormData({
-        category_id: '',
-        amount: 0,
-        period: 'monthly',
-        start_date: new Date().toISOString().split('T')[0],
-        end_date: ''
-      });
+      setFormData(getDefaultFormData());
       loadData();
     } catch (error) {
       console.error('Error saving budget:', error);
@@ -137,13 +153,7 @@ const Budgets = () => {
             onClick={() => {
               setShowForm(!showForm);
               setEditingId(null);
-              setFormData({
-                category_id: '',
-                amount: 0,
-                period: 'monthly',
-                start_date: new Date().toISOString().split('T')[0],
-                end_date: ''
-              });
+              setFormData(getDefaultFormData());
             }}
             className="btn btn-primary"
           >

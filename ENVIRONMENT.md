@@ -115,7 +115,7 @@ CORS_ORIGIN=https://yourdomain.com
 3. **Restrict CORS origins** - Only allow trusted domains in production
 4. **Rotate credentials** - Regularly update database passwords
 5. **Use environment-specific configs** - Different settings for dev/prod
-6. **Secure password storage** - Use secrets management in production (AWS Secrets Manager, Azure Key Vault, etc.)
+6. **Secure password storage** - Use secrets management in production (e.g. HashiCorp Vault, Docker secrets)
 
 ## Troubleshooting
 

@@ -48,5 +48,10 @@ infra/backend_override.tf
 infra/terraform.tfvars
 infra/terraform.tfvars.json
 infra/.terraform/
+
+# Kubernetes secrets — never commit real secret values
+k8s/secrets/db-secret.yaml
+k8s/secrets/app-secret.yaml
+k8s/talos-config/
 infra/.terraform.lock.hcl
 infra/tfplan

@@ -6,7 +6,19 @@ export const categoryController = {
     try {
       const { type } = req.query;
       const categories = type ? await Category.getByType(type, req.user.id) : await Category.getAll(req.user.id);
-      res.json(categories);
+
+      // Legacy databases may contain duplicated default categories from earlier seeding logic.
+      const seen = new Set();
+      const deduped = categories.filter((category) => {
+        const key = `${(category.type || '').toLowerCase()}:${(category.name || '').trim().toLowerCase()}`;
+        if (seen.has(key)) {
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+
+      res.json(deduped);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }

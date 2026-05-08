@@ -3,5 +3,4 @@ kind: Namespace
 metadata:
   name: finvibe
   labels:
-    app: finvibe
-    environment: production
+    app.kubernetes.io/name: finvibe

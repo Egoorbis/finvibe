@@ -16,8 +16,8 @@ COPY . .
 # Production stage
 FROM node:20-alpine
 
-# Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
+# Install dumb-init and upgrade npm to pick up patched bundled deps (tar, minimatch, glob, cross-spawn)
+RUN apk add --no-cache dumb-init && npm install -g npm@latest --no-fund --no-audit
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001

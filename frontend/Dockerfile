@@ -27,9 +27,12 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # Set default backend URL (can be overridden by environment variable)
 ENV BACKEND_URL=http://backend:3000
 
+# Remove curl (unused - healthcheck uses wget) to reduce attack surface
+RUN apk del curl || true
+
 # Create non-root user for nginx
 RUN touch /var/run/nginx.pid && \
-    chown -R nginx:nginx /var/run/nginx.pid /var/cache/nginx /etc/nginx/templates /etc/nginx/conf.d /var/log/nginx
+  chown -R nginx:nginx /var/run/nginx.pid /var/cache/nginx /etc/nginx/templates /etc/nginx/conf.d /var/log/nginx
 
 # Switch to non-root user
 USER nginx
