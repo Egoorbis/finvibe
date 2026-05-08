@@ -19,8 +19,8 @@ spec:
         app: postgres
     spec:
       securityContext:
-        runAsNonRoot: false  # postgres image requires root to start, drops to postgres user internally
-        fsGroup: 999         # postgres group id
+        runAsNonRoot: false # postgres image requires root to start, drops to postgres user internally
+        fsGroup: 999 # postgres group id
       containers:
         - name: postgres
           image: postgres:16-alpine

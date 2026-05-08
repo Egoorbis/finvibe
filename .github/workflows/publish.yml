@@ -5,17 +5,17 @@ on:
     branches:
       - main
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
   # Allow manual trigger from the Actions tab
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Image tag (defaults to short SHA)'
+        description: "Image tag (defaults to short SHA)"
         required: false
 
 permissions:
   contents: read
-  packages: write   # Required to push to GHCR
+  packages: write # Required to push to GHCR
 
 jobs:
   build-and-push:
@@ -67,4 +67,4 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          provenance: false   # Avoids multi-arch manifest issues on simple setups
+          provenance: false # Avoids multi-arch manifest issues on simple setups

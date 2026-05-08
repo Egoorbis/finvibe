@@ -19,7 +19,7 @@ spec:
     spec:
       securityContext:
         runAsNonRoot: true
-        runAsUser: 101   # nginx user in the image
+        runAsUser: 101 # nginx user in the image
         runAsGroup: 101
       containers:
         - name: frontend
