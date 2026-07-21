@@ -19,7 +19,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@azure/monitor-opentelemetry": "^1.18.0",
+    "@azure/monitor-opentelemetry": "^1.18.2",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
