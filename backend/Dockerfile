@@ -5,7 +5,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 WORKDIR /app
 
 COPY pyproject.toml ./
-RUN uv venv .venv && uv pip install --python .venv/bin/python fastapi httpx pydantic-settings uvicorn
+RUN uv venv .venv && uv pip install --python .venv/bin/python .
 
 COPY app ./app
 
