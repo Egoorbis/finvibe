@@ -5,7 +5,13 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 WORKDIR /app
 
 COPY pyproject.toml ./
-RUN uv venv .venv && uv pip install --python .venv/bin/python .
+RUN uv venv .venv && uv pip install --python .venv/bin/python \
+    "fastapi>=0.141.1" \
+    "httpx>=0.28.1" \
+    "pydantic-settings>=2.15.0" \
+    "sqlalchemy>=2.0.52" \
+    "asyncpg>=0.31.0" \
+    "uvicorn>=0.52.4"
 
 COPY app ./app
 
