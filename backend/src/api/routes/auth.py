@@ -6,7 +6,7 @@ from src.api.auth_deps import get_current_user
 from src.api.deps import get_db
 from src.core.security import generate_token, hash_password, random_token, verify_password
 from src.models.user import User
-from src.schemas.auth import ChangePasswordRequest, LoginRequest, ProfileUpdateRequest, RegisterRequest, ResetRequest, TokenRequest
+from src.schemas.auth import ChangePasswordRequest, LoginRequest, PasswordResetRequest, ProfileUpdateRequest, RegisterRequest, ResetRequest
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -17,11 +17,9 @@ def public_user(user: User):
 
 @router.post("/register", status_code=201)
 async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
-    existing = await db.scalar(select(User).where(or_(User.email == str(data.email).lower(), User.username == data.username)))
-    if existing:
-        raise HTTPException(status_code=409, detail="Email or username already exists")
     username = data.username or str(data.email).split("@", 1)[0]
-    if await db.scalar(select(User).where(User.username == username)):
+    existing = await db.scalar(select(User).where(or_(User.email == str(data.email).lower(), User.username == username)))
+    if existing:
         raise HTTPException(status_code=409, detail="Email or username already exists")
     user = User(username=username, email=str(data.email).lower(), password=hash_password(data.password), email_verified=False)
     db.add(user)
@@ -76,14 +74,12 @@ async def logout(user: User = Depends(get_current_user)):
 
 
 @router.post("/request-password-reset")
-async def request_password_reset(data: TokenRequest | dict, db: AsyncSession = Depends(get_db)):
-    email = data.get("email") if isinstance(data, dict) else getattr(data, "email", None)
-    if email:
-        user = await db.scalar(select(User).where(User.email == email.lower()))
-        if user:
-            user.reset_token = random_token()
-            user.reset_token_expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1)
-            await db.commit()
+async def request_password_reset(data: PasswordResetRequest, db: AsyncSession = Depends(get_db)):
+    user = await db.scalar(select(User).where(User.email == str(data.email).lower()))
+    if user:
+        user.reset_token = random_token()
+        user.reset_token_expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1)
+        await db.commit()
     return {"message": "If an account exists for that email, a password reset link has been sent."}
 
 
