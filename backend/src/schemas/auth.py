@@ -21,10 +21,6 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class PasswordRequest(BaseModel):
-    password: str = Field(min_length=8)
-
-
 class ChangePasswordRequest(BaseModel):
     currentPassword: str
     newPassword: str = Field(min_length=8)
@@ -40,6 +36,10 @@ class ProfileUpdateRequest(BaseModel):
         if value is not None and not re.fullmatch(r"[A-Za-z0-9_]{3,20}", value):
             raise ValueError("Username must be 3-20 characters and contain only letters, numbers, and underscores")
         return value
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
 
 
 class ResetRequest(BaseModel):
