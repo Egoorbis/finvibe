@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-import os
 from contextlib import asynccontextmanager
 
 import httpx
+from .config import settings
+
 from fastapi import FastAPI, Request
 from fastapi.responses import Response
 
-LEGACY_BACKEND_URL = os.getenv("LEGACY_BACKEND_URL", "http://legacy-backend:3000")
+LEGACY_BACKEND_URL = settings.LEGACY_BACKEND_URL
 
 
 @asynccontextmanager
