@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '../test/utils';
 import Header from './Header';
 
+vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ user: { username: 'tester' }, isAuthenticated: () => true, logout: vi.fn() }) }));
+
 describe('Header Component', () => {
   it('should render the FinVibe logo', () => {
     render(<Header />);
