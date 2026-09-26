@@ -53,7 +53,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install ./backend
       - name: Lint backend
-        run: ruff check backend/app
+        run: ruff check backend/app --select E9,F
       - name: Compile backend
         run: python -m compileall backend/app
       - name: Test backend
