@@ -16,7 +16,7 @@ describe('Login Component', () => {
   it('should render login form', () => {
     renderLogin();
 
-    expect(screen.getByText(/sign in/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
@@ -65,7 +65,7 @@ describe('Login Component', () => {
     });
   });
 
-  it('should validate email format', async () => {
+  it('should accept email or username input', async () => {
     renderLogin();
 
     fireEvent.change(screen.getByLabelText(/email/i), {
@@ -79,7 +79,7 @@ describe('Login Component', () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(screen.getByText(/please enter a valid email address/i)).toBeInTheDocument();
+      expect(screen.queryByText(/please enter a valid email address/i)).not.toBeInTheDocument();
     });
   });
 
@@ -192,7 +192,7 @@ describe('Login Component', () => {
     renderLogin();
 
     const emailInput = screen.getByLabelText(/email/i);
-    expect(emailInput).toHaveAttribute('type', 'email');
+    expect(emailInput).toHaveAttribute('type', 'text');
   });
 
   it('should handle form submission with Enter key', async () => {
