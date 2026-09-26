@@ -13,9 +13,9 @@ import Budgets from './pages/Budgets'
 import Reports from './pages/Reports'
 
 export const Link=TanLink
-export const useNavigate=()=>{ const navigate=tanUseNavigate(); return (to,options={})=>navigate({to,replace:options.replace,state:options.state}) }
+export const useNavigate=()=>{ const navigate=tanUseNavigate(); return (to: any,options: any={})=>navigate({to,replace:options.replace,state:options.state}) }
 export const useLocation=()=>tanUseLocation()
-export function Navigate({to,replace=false,state}) {
+export function Navigate({to,replace=false,state}: {to: string; replace?: boolean; state?: unknown}) {
   const navigate=tanUseNavigate()
   useEffect(()=>{ navigate({to,replace,state}) },[navigate,to,replace,state])
   return null
@@ -25,7 +25,7 @@ function Layout(){
   return <AuthProvider><div className="app"><Header/><main className="main-content"><Outlet/></main></div></AuthProvider>
 }
 const root=createRootRoute({component:Layout})
-const protectedElement=(Component)=> <ProtectedRoute><Component/></ProtectedRoute>
+const protectedElement=(Component: any)=> <ProtectedRoute><Component/></ProtectedRoute>
 const routes=[
   createRoute({getParentRoute:()=>root,path:"/login",component:Login}),
   createRoute({getParentRoute:()=>root,path:"/register",component:Register}),
