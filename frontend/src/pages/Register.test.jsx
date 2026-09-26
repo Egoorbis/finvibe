@@ -2,27 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '../test/utils';
 import Register from './Register';
 import { AuthProvider } from '../context/AuthContext';
-import { BrowserRouter } from 'react-router-dom';
-
-// Mock the navigation
-const mockNavigate = vi.fn();
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom');
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-  };
-});
 
 // Helper to render with necessary providers
 const renderRegister = () => {
-  return render(
-    <BrowserRouter>
-      <AuthProvider>
-        <Register />
-      </AuthProvider>
-    </BrowserRouter>
-  );
+  return render(<Register />);
 };
 
 describe('Register Component', () => {
