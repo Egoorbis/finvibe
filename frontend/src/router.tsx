@@ -13,7 +13,7 @@ import Budgets from './pages/Budgets'
 import Reports from './pages/Reports'
 
 export const Link=TanLink
-export const useNavigate=()=>{ const navigate=tanUseNavigate(); return (to: any,options: any={})=>navigate({to,replace:options.replace,state:options.state}) }
+export const useNavigate=()=>{ const navigate=tanUseNavigate(); return (to: any,options: any={})=>navigate({to,replace:options.replace,state:options.state as any}) }
 export const useLocation=()=>tanUseLocation()
 export function Navigate({to,replace=false,state}: {to: string; replace?: boolean; state?: unknown}) {
   const navigate=tanUseNavigate()
