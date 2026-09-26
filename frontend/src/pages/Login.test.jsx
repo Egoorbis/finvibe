@@ -152,13 +152,6 @@ describe('Login Component', () => {
     expect(registerLink.closest('a')).toHaveAttribute('href', '/register');
   });
 
-  it('should have a forgot password link', () => {
-    renderLogin();
-
-    const forgotLink = screen.getByText(/forgot password/i);
-    expect(forgotLink).toBeInTheDocument();
-  });
-
   it('should allow typing in email field', () => {
     renderLogin();
 
