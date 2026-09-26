@@ -172,3 +172,134 @@ async def update_category(id:int,request:Request,user=Depends(current_user),sess
 async def delete_category(id:int,user=Depends(current_user),session=Depends(get_session)):
     r=await session.execute(text("DELETE FROM categories WHERE id=:id AND user_id=:u AND is_default=0"),{"id":id,"u":user["id"]}); await session.commit()
     if r.rowcount==0: raise HTTPException(404,"Category not found")
+
+async def tx_payload(request):
+    if request.headers.get("content-type","").startswith("multipart/"):
+        form=await request.form(); data=dict(form); upload=data.pop("attachment",None); return data,upload
+    return await request.json(),None
+
+async def save_upload(upload):
+    if not isinstance(upload,UploadFile): return None
+    if upload.content_type not in ALLOWED: raise HTTPException(400,"Invalid attachment type")
+    data=await upload.read()
+    if len(data)>5*1024*1024: raise HTTPException(400,"Attachment exceeds 5MB limit")
+    name=f"{int(datetime.now().timestamp()*1000)}_{secrets.token_hex(6)}_{Path(upload.filename or 'attachment').name.replace(' ','_')}"
+    p=UPLOAD_DIR/name; p.write_bytes(data); return str(p)
+
+def tx_cast(b):
+    for k in ("account_id","category_id"): b[k]=int(b[k])
+    b["amount"]=Decimal(str(b["amount"]))
+    b.setdefault("description",None); b.setdefault("tags",None); return b
+
+@router.get("/transactions")
+async def transactions(request:Request,user=Depends(current_user),session=Depends(get_session)):
+    q="SELECT t.*,a.name account_name,a.type account_type,c.name category_name,c.color category_color,c.icon category_icon FROM transactions t LEFT JOIN accounts a ON t.account_id=a.id LEFT JOIN categories c ON t.category_id=c.id WHERE t.user_id=:u"; p={"u":user["id"]}
+    for k,op in [("type","="),("account_id","="),("category_id","="),("start_date",">="),("end_date","<=")]:
+        v=request.query_params.get(k)
+        if v: q+=f" AND t.{k} {op} :{k}"; p[k]=v
+    lim=request.query_params.get("limit")
+    if lim:
+        try: lim=int(lim)
+        except ValueError: lim=0
+        if lim<1 or lim>1000: raise HTTPException(400,"Invalid limit parameter. Must be a positive integer between 1 and 1000.")
+        q+=" LIMIT :limit"; p["limit"]=lim
+    q+=" ORDER BY t.date DESC,t.created_at DESC"
+    return [row(x) for x in (await session.execute(text(q),p)).mappings().all()]
+
+@router.get("/transactions/{id}")
+async def transaction(id:int,user=Depends(current_user),session=Depends(get_session)):
+    r=(await session.execute(text("SELECT t.*,a.name account_name,a.type account_type,c.name category_name,c.color category_color,c.icon category_icon FROM transactions t LEFT JOIN accounts a ON t.account_id=a.id LEFT JOIN categories c ON t.category_id=c.id WHERE t.id=:id AND t.user_id=:u"),{"id":id,"u":user["id"]})).mappings().first()
+    if not r: raise HTTPException(404,"Transaction not found")
+    return row(r)
+
+@router.post("/transactions",status_code=201)
+async def create_transaction(request:Request,user=Depends(current_user),session=Depends(get_session)):
+    b,upload=await tx_payload(request); b=tx_cast(b); b["attachment_path"]=await save_upload(upload) or b.get("attachment_path")
+    r=(await session.execute(text("INSERT INTO transactions(user_id,date,amount,type,description,account_id,category_id,tags,attachment_path) VALUES(:u,:d,:a,:t,:x,:ai,:ci,:g,:p) RETURNING id"),{"u":user["id"],"d":b["date"],"a":b["amount"],"t":b["type"],"x":b["description"],"ai":b["account_id"],"ci":b["category_id"],"g":b["tags"],"p":b["attachment_path"]})).scalar_one()
+    delta=b["amount"] if b["type"]=="income" else -b["amount"]
+    await session.execute(text("UPDATE accounts SET balance=balance+:d,updated_at=CURRENT_TIMESTAMP WHERE id=:id AND user_id=:u"),{"d":delta,"id":b["account_id"],"u":user["id"]}); await session.commit()
+    return await transaction(r,user,session)
+
+@router.put("/transactions/{id}")
+async def update_transaction(id:int,request:Request,user=Depends(current_user),session=Depends(get_session)):
+    old=(await session.execute(text("SELECT * FROM transactions WHERE id=:id AND user_id=:u"),{"id":id,"u":user["id"]})).mappings().first()
+    if not old: raise HTTPException(404,"Transaction not found")
+    b,upload=await tx_payload(request); b=tx_cast(b); b["attachment_path"]=await save_upload(upload) or b.get("attachment_path")
+    olddelta=-old["amount"] if old["type"]=="income" else old["amount"]; newdelta=b["amount"] if b["type"]=="income" else -b["amount"]
+    await session.execute(text("UPDATE accounts SET balance=balance+:d,updated_at=CURRENT_TIMESTAMP WHERE id=:id AND user_id=:u"),{"d":olddelta,"id":old["account_id"],"u":user["id"]})
+    await session.execute(text("UPDATE accounts SET balance=balance+:d,updated_at=CURRENT_TIMESTAMP WHERE id=:id AND user_id=:u"),{"d":newdelta,"id":b["account_id"],"u":user["id"]})
+    await session.execute(text("UPDATE transactions SET date=:d,amount=:a,type=:t,description=:x,account_id=:ai,category_id=:ci,tags=:g,attachment_path=:p,updated_at=CURRENT_TIMESTAMP WHERE id=:id AND user_id=:u"),{"d":b["date"],"a":b["amount"],"t":b["type"],"x":b["description"],"ai":b["account_id"],"ci":b["category_id"],"g":b["tags"],"p":b["attachment_path"],"id":id,"u":user["id"]}); await session.commit()
+    return await transaction(id,user,session)
+
+@router.delete("/transactions/{id}",status_code=204)
+async def delete_transaction(id:int,user=Depends(current_user),session=Depends(get_session)):
+    old=(await session.execute(text("SELECT * FROM transactions WHERE id=:id AND user_id=:u"),{"id":id,"u":user["id"]})).mappings().first()
+    if not old: raise HTTPException(404,"Transaction not found")
+    delta=-old["amount"] if old["type"]=="income" else old["amount"]
+    await session.execute(text("UPDATE accounts SET balance=balance+:d,updated_at=CURRENT_TIMESTAMP WHERE id=:id AND user_id=:u"),{"d":delta,"id":old["account_id"],"u":user["id"]})
+    await session.execute(text("DELETE FROM transactions WHERE id=:id AND user_id=:u"),{"id":id,"u":user["id"]}); await session.commit()
+
+async def budget_row(id,user,session):
+    r=(await session.execute(text("SELECT b.*,c.name category_name,c.color category_color,c.icon category_icon FROM budgets b LEFT JOIN categories c ON b.category_id=c.id WHERE b.id=:id AND b.user_id=:u"),{"id":id,"u":user["id"]})).mappings().first()
+    if not r: raise HTTPException(404,"Budget not found")
+    return row(r)
+
+async def budget_progress_value(b,user_id,session):
+    spent=(await session.execute(text("SELECT COALESCE(SUM(amount),0) FROM transactions WHERE user_id=:u AND category_id=:c AND type='expense' AND date BETWEEN :s AND :e"),{"u":user_id,"c":b["category_id"],"s":b["start_date"],"e":b["end_date"]})).scalar_one()
+    b["spent"]=spent; b["remaining"]=b["amount"]-spent; b["percentage"]=(spent/b["amount"]*100) if b["amount"] else 0; return b
+
+@router.get("/budgets")
+async def budgets(user=Depends(current_user),session=Depends(get_session)):
+    return [row(x) for x in (await session.execute(text("SELECT b.*,c.name category_name,c.color category_color,c.icon category_icon FROM budgets b LEFT JOIN categories c ON b.category_id=c.id WHERE b.user_id=:u ORDER BY b.start_date DESC"),{"u":user["id"]})).mappings().all()]
+
+@router.get("/budgets/active")
+async def active_budgets(request:Request,user=Depends(current_user),session=Depends(get_session)):
+    d=request.query_params.get("date") or date.today().isoformat()
+    return [row(x) for x in (await session.execute(text("SELECT b.*,c.name category_name,c.color category_color,c.icon category_icon FROM budgets b LEFT JOIN categories c ON b.category_id=c.id WHERE b.user_id=:u AND :d BETWEEN b.start_date AND b.end_date ORDER BY c.name"),{"u":user["id"],"d":d})).mappings().all()]
+
+@router.get("/budgets/progress")
+async def all_budget_progress(request:Request,user=Depends(current_user),session=Depends(get_session)):
+    return [await budget_progress_value(x,user["id"],session) for x in await active_budgets(request,user,session)]
+
+@router.get("/budgets/{id}/progress")
+async def one_budget_progress(id:int,user=Depends(current_user),session=Depends(get_session)):
+    return await budget_progress_value(await budget_row(id,user,session),user["id"],session)
+
+@router.get("/budgets/{id}")
+async def get_budget(id:int,user=Depends(current_user),session=Depends(get_session)): return await budget_row(id,user,session)
+
+@router.post("/budgets",status_code=201)
+async def create_budget(request:Request,user=Depends(current_user),session=Depends(get_session)):
+    b=await request.json()
+    r=(await session.execute(text("INSERT INTO budgets(user_id,category_id,amount,period,start_date,end_date) VALUES(:u,:c,:a,:p,:s,:e) RETURNING id"),{"u":user["id"],"c":b.get("category_id"),"a":b.get("amount"),"p":b.get("period"),"s":b.get("start_date"),"e":b.get("end_date")})).scalar_one()
+    await session.commit(); return await budget_row(r,user,session)
+
+@router.put("/budgets/{id}")
+async def update_budget(id:int,request:Request,user=Depends(current_user),session=Depends(get_session)):
+    b=await request.json()
+    r=(await session.execute(text("UPDATE budgets SET category_id=:c,amount=:a,period=:p,start_date=:s,end_date=:e,updated_at=CURRENT_TIMESTAMP WHERE id=:id AND user_id=:u RETURNING id"),{"c":b.get("category_id"),"a":b.get("amount"),"p":b.get("period"),"s":b.get("start_date"),"e":b.get("end_date"),"id":id,"u":user["id"]})).scalar_one_or_none()
+    if not r: raise HTTPException(404,"Budget not found")
+    await session.commit(); return await budget_row(id,user,session)
+
+@router.delete("/budgets/{id}",status_code=204)
+async def delete_budget(id:int,user=Depends(current_user),session=Depends(get_session)):
+    r=await session.execute(text("DELETE FROM budgets WHERE id=:id AND user_id=:u"),{"id":id,"u":user["id"]}); await session.commit()
+    if r.rowcount==0: raise HTTPException(404,"Budget not found")
+
+@router.get("/reports/summary")
+async def report_summary(request:Request,user=Depends(current_user),session=Depends(get_session)):
+    q="SELECT type,COUNT(*) count,SUM(amount) total,AVG(amount) average FROM transactions WHERE user_id=:u"; p={"u":user["id"]}
+    for k,op in [("start_date",">="),("end_date","<=")]:
+        v=request.query_params.get(k)
+        if v:q+=f" AND date {op} :{k}"; p[k]=v
+    rows=[row(x) for x in (await session.execute(text(q+" GROUP BY type"),p)).mappings().all()]
+    inc=next((x for x in rows if x["type"]=="income"),{"count":0,"total":0,"average":0}); exp=next((x for x in rows if x["type"]=="expense"),{"count":0,"total":0,"average":0})
+    return {"income":inc,"expense":exp,"netIncome":inc["total"]-exp["total"]}
+
+@router.get("/reports/by-category")
+async def report_category(request:Request,user=Depends(current_user),session=Depends(get_session)):
+    q="SELECT c.id,c.name,c.color,c.icon,t.type,COUNT(*) count,SUM(t.amount) total FROM transactions t LEFT JOIN categories c ON t.category_id=c.id WHERE t.user_id=:u"; p={"u":user["id"]}
+    for k,op in [("type","="),("start_date",">="),("end_date","<=")]:
+        v=request.query_params.get(k)
+        if v:q+=f" AND t.{k} {op} :{k}"; p[k]=v
+    return [row(x) for x in (await session.execute(text(q+" GROUP BY c.id,c.name,c.color,c.icon,t.type ORDER BY total DESC"),p)).mappings().all()]
