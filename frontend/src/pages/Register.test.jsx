@@ -2,27 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '../test/utils';
 import Register from './Register';
 import { AuthProvider } from '../context/AuthContext';
-import { BrowserRouter } from 'react-router-dom';
-
-// Mock the navigation
-const mockNavigate = vi.fn();
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom');
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-  };
-});
 
 // Helper to render with necessary providers
 const renderRegister = () => {
-  return render(
-    <BrowserRouter>
-      <AuthProvider>
-        <Register />
-      </AuthProvider>
-    </BrowserRouter>
-  );
+  return render(<Register />);
 };
 
 describe('Register Component', () => {
@@ -58,7 +41,7 @@ describe('Register Component', () => {
     });
   });
 
-  it('should validate email format', async () => {
+  it('should enforce browser email validation', async () => {
     renderRegister();
 
     fireEvent.change(screen.getByLabelText(/email/i), {
@@ -74,17 +57,12 @@ describe('Register Component', () => {
     const submitButton = screen.getByRole('button', { name: /sign up/i });
     fireEvent.click(submitButton);
 
-    await waitFor(() => {
-      expect(screen.getByText(/please enter a valid email address/i)).toBeInTheDocument();
-    });
+    expect(screen.getByLabelText(/email/i)).toBeInvalid();
   });
 
   it('should reject password shorter than 8 characters', async () => {
     renderRegister();
 
-    fireEvent.change(screen.getByLabelText(/username/i), {
-      target: { value: 'testuser' },
-    });
     fireEvent.change(screen.getByLabelText(/email/i), {
       target: { value: 'test@example.com' },
     });
@@ -106,9 +84,6 @@ describe('Register Component', () => {
   it('should accept password with exactly 8 characters', async () => {
     renderRegister();
 
-    fireEvent.change(screen.getByLabelText(/username/i), {
-      target: { value: 'testuser' },
-    });
     fireEvent.change(screen.getByLabelText(/email/i), {
       target: { value: 'test@example.com' },
     });
@@ -132,9 +107,6 @@ describe('Register Component', () => {
   it('should reject password with only 6 characters', async () => {
     renderRegister();
 
-    fireEvent.change(screen.getByLabelText(/username/i), {
-      target: { value: 'testuser' },
-    });
     fireEvent.change(screen.getByLabelText(/email/i), {
       target: { value: 'test@example.com' },
     });
@@ -156,9 +128,6 @@ describe('Register Component', () => {
   it('should validate password confirmation match', async () => {
     renderRegister();
 
-    fireEvent.change(screen.getByLabelText(/username/i), {
-      target: { value: 'testuser' },
-    });
     fireEvent.change(screen.getByLabelText(/email/i), {
       target: { value: 'test@example.com' },
     });
@@ -188,10 +157,8 @@ describe('Register Component', () => {
       expect(screen.getByText(/please fill in all fields/i)).toBeInTheDocument();
     });
 
-    // Start typing in username field
-    fireEvent.change(screen.getByLabelText(/username/i), {
-      target: { value: 't' },
-    });
+    // Start typing in email field
+    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 't' } });
 
     // Error should be cleared
     await waitFor(() => {
@@ -202,9 +169,6 @@ describe('Register Component', () => {
   it('should show loading state during submission', async () => {
     renderRegister();
 
-    fireEvent.change(screen.getByLabelText(/username/i), {
-      target: { value: 'testuser' },
-    });
     fireEvent.change(screen.getByLabelText(/email/i), {
       target: { value: 'test@example.com' },
     });
@@ -236,9 +200,6 @@ describe('Register Component', () => {
     renderRegister();
 
     // Fill in valid data
-    fireEvent.change(screen.getByLabelText(/username/i), {
-      target: { value: 'validuser' },
-    });
     fireEvent.change(screen.getByLabelText(/email/i), {
       target: { value: 'valid@example.com' },
     });
