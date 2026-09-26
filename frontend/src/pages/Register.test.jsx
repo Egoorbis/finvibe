@@ -84,9 +84,6 @@ describe('Register Component', () => {
   it('should accept password with exactly 8 characters', async () => {
     renderRegister();
 
-    fireEvent.change(screen.getByLabelText(/username/i), {
-      target: { value: 'testuser' },
-    });
     fireEvent.change(screen.getByLabelText(/email/i), {
       target: { value: 'test@example.com' },
     });
@@ -110,9 +107,6 @@ describe('Register Component', () => {
   it('should reject password with only 6 characters', async () => {
     renderRegister();
 
-    fireEvent.change(screen.getByLabelText(/username/i), {
-      target: { value: 'testuser' },
-    });
     fireEvent.change(screen.getByLabelText(/email/i), {
       target: { value: 'test@example.com' },
     });
@@ -134,9 +128,6 @@ describe('Register Component', () => {
   it('should validate password confirmation match', async () => {
     renderRegister();
 
-    fireEvent.change(screen.getByLabelText(/username/i), {
-      target: { value: 'testuser' },
-    });
     fireEvent.change(screen.getByLabelText(/email/i), {
       target: { value: 'test@example.com' },
     });
@@ -177,9 +168,6 @@ describe('Register Component', () => {
   it('should show loading state during submission', async () => {
     renderRegister();
 
-    fireEvent.change(screen.getByLabelText(/username/i), {
-      target: { value: 'testuser' },
-    });
     fireEvent.change(screen.getByLabelText(/email/i), {
       target: { value: 'test@example.com' },
     });
@@ -211,9 +199,6 @@ describe('Register Component', () => {
     renderRegister();
 
     // Fill in valid data
-    fireEvent.change(screen.getByLabelText(/username/i), {
-      target: { value: 'validuser' },
-    });
     fireEvent.change(screen.getByLabelText(/email/i), {
       target: { value: 'valid@example.com' },
     });
