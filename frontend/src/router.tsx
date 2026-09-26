@@ -17,7 +17,7 @@ export const useNavigate=()=>{ const navigate=tanUseNavigate(); return (to: any,
 export const useLocation=()=>tanUseLocation()
 export function Navigate({to,replace=false,state}: {to: string; replace?: boolean; state?: unknown}) {
   const navigate=tanUseNavigate()
-  useEffect(()=>{ navigate({to,replace,state}) },[navigate,to,replace,state])
+  useEffect(()=>{ navigate({to,replace,state: state as any}) },[navigate,to,replace,state])
   return null
 }
 
