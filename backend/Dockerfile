@@ -1,23 +1,9 @@
 FROM python:3.12-slim
-
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
-
 WORKDIR /app
-
 COPY pyproject.toml ./
-RUN uv venv .venv && uv pip install --python .venv/bin/python \
-    "fastapi>=0.141.1" \
-    "httpx>=0.28.1" \
-    "pydantic-settings>=2.15.0" \
-    "sqlalchemy>=2.0.52" \
-    "asyncpg>=0.31.0" \
-    "uvicorn>=0.52.4"
-
+RUN uv venv .venv && uv pip install --python .venv/bin/python .
 COPY app ./app
-
 ENV PATH="/app/.venv/bin:$PATH"
-ENV LEGACY_BACKEND_URL=http://legacy-backend:3000
-
 EXPOSE 8000
-
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn","app.main:app","--host","0.0.0.0","--port","8000"]
