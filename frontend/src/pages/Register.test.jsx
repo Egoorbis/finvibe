@@ -157,7 +157,8 @@ describe('Register Component', () => {
       expect(screen.getByText(/please fill in all fields/i)).toBeInTheDocument();
     });
 
-    // Start typing in username field
+    // Start typing in email field
+    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 't' } });
 
     // Error should be cleared
     await waitFor(() => {
