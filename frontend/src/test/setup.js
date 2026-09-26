@@ -17,8 +17,8 @@ afterEach(() => {
 });
 
 afterAll(() => {
-  console.log.mockRestore();
-  console.error.mockRestore();
+  if (typeof console.log.mockRestore === 'function') console.log.mockRestore();
+  if (typeof console.error.mockRestore === 'function') console.error.mockRestore();
   console.log = originalLog;
   console.error = originalError;
 });
