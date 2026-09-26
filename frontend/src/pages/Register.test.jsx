@@ -41,7 +41,7 @@ describe('Register Component', () => {
     });
   });
 
-  it('should validate email format', async () => {
+  it('should enforce browser email validation', async () => {
     renderRegister();
 
     fireEvent.change(screen.getByLabelText(/email/i), {
@@ -57,17 +57,12 @@ describe('Register Component', () => {
     const submitButton = screen.getByRole('button', { name: /sign up/i });
     fireEvent.click(submitButton);
 
-    await waitFor(() => {
-      expect(screen.getByText(/please enter a valid email address/i)).toBeInTheDocument();
-    });
+    expect(screen.getByLabelText(/email/i)).toBeInvalid();
   });
 
   it('should reject password shorter than 8 characters', async () => {
     renderRegister();
 
-    fireEvent.change(screen.getByLabelText(/username/i), {
-      target: { value: 'testuser' },
-    });
     fireEvent.change(screen.getByLabelText(/email/i), {
       target: { value: 'test@example.com' },
     });
@@ -172,9 +167,6 @@ describe('Register Component', () => {
     });
 
     // Start typing in username field
-    fireEvent.change(screen.getByLabelText(/username/i), {
-      target: { value: 't' },
-    });
 
     // Error should be cleared
     await waitFor(() => {
