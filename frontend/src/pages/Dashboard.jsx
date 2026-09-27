@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '../router';
 import { reportService, transactionService, accountService, budgetService } from '../services';
 import { formatCurrency, formatDisplayDate, getDateRange } from '../utils/helpers';
 import './Dashboard.css';

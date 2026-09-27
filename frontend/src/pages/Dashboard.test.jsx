@@ -91,6 +91,6 @@ describe('Dashboard Component', () => {
       expect.any(Error)
     );
 
-    consoleError.mockRestore();
+    consoleError.mockImplementation(() => {});
   });
 });

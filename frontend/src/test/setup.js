@@ -1,11 +1,24 @@
-import { expect, afterEach } from 'vitest';
+import { expect, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import * as matchers from '@testing-library/jest-dom/matchers';
 
-// Extend Vitest's expect with jest-dom matchers
 expect.extend(matchers);
 
-// Cleanup after each test
+const originalLog = console.log;
+const originalError = console.error;
+
+beforeAll(() => {
+  vi.spyOn(console, 'log').mockImplementation(() => {});
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+});
+
 afterEach(() => {
   cleanup();
+});
+
+afterAll(() => {
+  if (typeof console.log.mockRestore === 'function') console.log.mockRestore();
+  if (typeof console.error.mockRestore === 'function') console.error.mockRestore();
+  console.log = originalLog;
+  console.error = originalError;
 });

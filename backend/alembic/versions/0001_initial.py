@@ -1,0 +1,26 @@
+from alembic import op
+import sqlalchemy as sa
+
+revision="0001_initial"
+down_revision=None
+branch_labels=None
+depends_on=None
+
+def upgrade():
+    op.create_table("users",sa.Column("id",sa.Integer,primary_key=True),sa.Column("username",sa.String(255),nullable=False,unique=True),sa.Column("email",sa.String(255),nullable=False,unique=True),sa.Column("password",sa.String(255),nullable=False),sa.Column("email_verified",sa.Integer,server_default="0"),sa.Column("verification_token",sa.String(255)),sa.Column("verification_token_expires",sa.DateTime),sa.Column("reset_token",sa.String(255)),sa.Column("reset_token_expires",sa.DateTime),sa.Column("created_at",sa.DateTime,server_default=sa.text("CURRENT_TIMESTAMP")),sa.Column("updated_at",sa.DateTime,server_default=sa.text("CURRENT_TIMESTAMP")))
+    op.create_table("accounts",sa.Column("id",sa.Integer,primary_key=True),sa.Column("user_id",sa.Integer,sa.ForeignKey("users.id",ondelete="CASCADE"),nullable=False),sa.Column("name",sa.String(255),nullable=False),sa.Column("type",sa.String(50),nullable=False),sa.Column("balance",sa.Numeric(15,2),server_default="0"),sa.Column("currency",sa.String(10),server_default="USD"),sa.Column("created_at",sa.DateTime,server_default=sa.text("CURRENT_TIMESTAMP")),sa.Column("updated_at",sa.DateTime,server_default=sa.text("CURRENT_TIMESTAMP")))
+    op.create_table("categories",sa.Column("id",sa.Integer,primary_key=True),sa.Column("user_id",sa.Integer,sa.ForeignKey("users.id",ondelete="CASCADE")),sa.Column("name",sa.String(255),nullable=False),sa.Column("type",sa.String(50),nullable=False),sa.Column("color",sa.String(50)),sa.Column("icon",sa.String(50)),sa.Column("is_default",sa.Integer,server_default="0"),sa.Column("created_at",sa.DateTime,server_default=sa.text("CURRENT_TIMESTAMP")),sa.Column("updated_at",sa.DateTime,server_default=sa.text("CURRENT_TIMESTAMP")))
+    op.create_table("transactions",sa.Column("id",sa.Integer,primary_key=True),sa.Column("user_id",sa.Integer,sa.ForeignKey("users.id",ondelete="CASCADE"),nullable=False),sa.Column("date",sa.Date,nullable=False),sa.Column("amount",sa.Numeric(15,2),nullable=False),sa.Column("type",sa.String(50),nullable=False),sa.Column("description",sa.Text),sa.Column("account_id",sa.Integer,sa.ForeignKey("accounts.id",ondelete="CASCADE"),nullable=False),sa.Column("category_id",sa.Integer,sa.ForeignKey("categories.id",ondelete="RESTRICT"),nullable=False),sa.Column("tags",sa.Text),sa.Column("attachment_path",sa.Text),sa.Column("created_at",sa.DateTime,server_default=sa.text("CURRENT_TIMESTAMP")),sa.Column("updated_at",sa.DateTime,server_default=sa.text("CURRENT_TIMESTAMP")))
+    op.create_table("budgets",sa.Column("id",sa.Integer,primary_key=True),sa.Column("user_id",sa.Integer,sa.ForeignKey("users.id",ondelete="CASCADE"),nullable=False),sa.Column("category_id",sa.Integer,sa.ForeignKey("categories.id",ondelete="CASCADE"),nullable=False),sa.Column("amount",sa.Numeric(15,2),nullable=False),sa.Column("period",sa.String(50),nullable=False),sa.Column("start_date",sa.Date,nullable=False),sa.Column("end_date",sa.Date,nullable=False),sa.Column("created_at",sa.DateTime,server_default=sa.text("CURRENT_TIMESTAMP")),sa.Column("updated_at",sa.DateTime,server_default=sa.text("CURRENT_TIMESTAMP")))
+    for table,col in [("users","email"),("users","username"),("users","reset_token"),("users","verification_token"),("accounts","user_id"),("categories","user_id"),("transactions","user_id"),("transactions","date"),("transactions","account_id"),("transactions","category_id"),("transactions","type"),("budgets","user_id"),("budgets","category_id")]:
+        op.create_index(f"idx_{table}_{col}",table,[col])
+    op.create_index("idx_budgets_dates","budgets",["start_date","end_date"])
+    rows=[
+        ("Food & Dining","expense","#FF6B6B","🍽️"),("Groceries","expense","#4ECDC4","🛒"),("Transportation","expense","#45B7D1","🚗"),("Shopping","expense","#FFA07A","🛍️"),("Entertainment","expense","#98D8C8","🎬"),("Bills & Utilities","expense","#F7B731","📄"),("Healthcare","expense","#5F27CD","🏥"),("Education","expense","#00D2D3","📚"),("Travel","expense","#54A0FF","✈️"),("Home & Garden","expense","#48DBFB","🏡"),("Insurance","expense","#FF9FF3","🛡️"),("Personal Care","expense","#FFA502","💆"),("Gifts & Donations","expense","#FF6348","🎁"),("Subscriptions","expense","#2ED573","📱"),("Other Expenses","expense","#A4B0BE","💸"),("Salary","income","#26DE81","💰"),("Freelance","income","#20BF6B","💼"),("Business","income","#0FB9B1","🏢"),("Investments","income","#2BCBBA","📈"),("Gifts Received","income","#FD79A8","🎁"),("Refunds","income","#A29BFE","💵"),("Other Income","income","#6C5CE7","💳")
+    ]
+    for name,typ,color,icon in rows:
+        op.execute(sa.text("INSERT INTO categories(user_id,name,type,color,icon,is_default) VALUES(NULL,:n,:t,:c,:i,1)").bindparams(n=name,t=typ,c=color,i=icon))
+
+def downgrade():
+    for t in ["budgets","transactions","categories","accounts","users"]:
+        op.drop_table(t)
